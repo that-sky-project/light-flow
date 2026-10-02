@@ -1,0 +1,11 @@
+.vs/
+.vscode/
+.VSCodeCounter/
+
+*.vcxproj.user
+
+dist/
+build/
+
+test*
+test.*
