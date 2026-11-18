@@ -1,0 +1,13 @@
+{
+  "package_name": "light-flow",
+  "version": "0.1.0",
+  "game_edition": 3,
+  "mod_name": "Light Flow",
+  "description": "",
+  "main": "light-flow.dll",
+  "dependencies": {},
+  "keywords": [],
+  "author": "HTMonkeyG",
+  "license": "MIT",
+  "website": ""
+}

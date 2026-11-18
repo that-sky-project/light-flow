@@ -1,0 +1,6 @@
+#ifndef __SKYLINK_SKYRENDERTARGET_HPP__
+#define __SKYLINK_SKYRENDERTARGET_HPP__
+
+
+
+#endif
