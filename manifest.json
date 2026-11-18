@@ -1,0 +1,20 @@
+{
+  "package_name": "light-flow",
+  "version": "0.1.0",
+  "game_edition": 3,
+  "mod_name": "Light Flow",
+  "description": "High quality in-game recording mod.",
+  "main": "light-flow.dll",
+  "dependencies": {
+    "htmodloader": ">=1.11.0"
+  },
+  "keywords": [
+    "recording",
+    "video",
+    "screenshot",
+    "ffmpeg"
+  ],
+  "author": "HTMonkeyG",
+  "license": "MIT",
+  "website": ""
+}
