@@ -10,9 +10,6 @@
     <Filter Include="src\skylink">
       <UniqueIdentifier>{13f2b6af-347e-4abd-993e-3448bd2b876f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\skylink\link">
-      <UniqueIdentifier>{f4933df8-8d14-45d7-bde7-98daffc85a6f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\record">
       <UniqueIdentifier>{6b8e952d-032d-4a8a-a601-322b9c92f7af}</UniqueIdentifier>
     </Filter>
@@ -109,18 +106,6 @@
   <ItemGroup>
     <ClCompile Include="..\src\utils\assert.cpp">
       <Filter>src\utils</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\skylink\link\skyCompositor.cpp">
-      <Filter>src\skylink\link</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp">
-      <Filter>src\skylink\link</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\skylink\link\skySystemIO.cpp">
-      <Filter>src\skylink\link</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\skylink\link\skyTexture.cpp">
-      <Filter>src\skylink\link</Filter>
     </ClCompile>
     <ClCompile Include="..\src\dllmain.cpp" />
     <ClCompile Include="..\src\mod.cpp" />

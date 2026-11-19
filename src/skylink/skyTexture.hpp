@@ -3,10 +3,11 @@
 
 #include "utils/types.hpp"
 #include "metabinary/metabinary.hpp"
+#include "skylink/skyGfx.hpp"
 
 struct TextureDescriptor {
   u08 type;
-  u08 format;        // GfxTexelFormat
+  GfxTexelFormat format;        // GfxTexelFormat
   u08 sampleCount;
   u08 unk_1;
   u16 unk_2;
@@ -36,10 +37,7 @@ struct Texture {
   u08 unk_6;
   i16 unk_7;
 
-  // Linked through MetaBinary. MetaBinarySystem assigns the address from
-  // BinaryDescriptor.json; the macro keeps the call site looking like a normal
-  // member call.
-  METABINARY_LINK_MFN_DECL(u32, Texture, GetReadableTexture, 0, (i32 index))
+  METABINARY_LINK_MFN(u32, Texture, GetReadableTexture, 0, (i32 index), (index))
 };
 
 #endif

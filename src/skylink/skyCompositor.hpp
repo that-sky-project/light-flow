@@ -11,10 +11,11 @@
 
 class Compositor {
 public:
-  METABINARY_LINK_MFN_DECL(void, Compositor, Render, 0, (Scene *, Camera *, Ambience *, Ocean *, JobBarn *, CameraSystem *, SystemUI *))
+  METABINARY_LINK_MFN(void, Compositor, Render, 0,
+    (JobBarn *jobBarn, CameraSystem *cameraSystem, SystemUI *systemUI),
+    (jobBarn, cameraSystem, systemUI)
+  )
 };
-
-
 
 namespace CompositorOffsets {
   // Compositor fields.

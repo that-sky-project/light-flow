@@ -469,49 +469,33 @@ private:
 // ```
 // class Game {
 // public:
-//   METABINARY_LINK_MFN_DECL(void, Game, Alloc, 0, ())
+//   METABINARY_LINK_MFN(void, Game, Alloc, 0, (), ())
 // };
 //
 // class Test {
 // public:
-//   METABINARY_LINK_MFN_DECL(void, Test, Func, 0, (int))
-//   METABINARY_LINK_MFN_DECL(void, Test, Func, 1, (float))
+//   METABINARY_LINK_MFN(void, Test, Func, 0, (int a1), (a1))
+//   METABINARY_LINK_MFN(void, Test, Func, 1, (float a1), (a1))
 // };
 // ```
-#define METABINARY_LINK_MFN_DECL(_return, _namespace, _name, _index, _params) \
-  static MetaBinaryFunctionImpl<_return (_namespace::*) _params> sfn_ ## _name ## _ ## _index; \
-  _return _name _params;
-
-// Note: Actually define the member function link declared in the class. Place
-//       this macro in the cpp file. The parameter list and overload index must
-//       match those written in the declaration macro.
-//
-// Example:
-// ```
-// METABINARY_LINK_MFN_DEF(void, Game, Alloc, 0, (), ())
-// METABINARY_LINK_MFN_DEF(void, Test, Func, 0, (int i0), (i0))
-// METABINARY_LINK_MFN_DEF(void, Test, Func, 1, (float f0), (f0))
-// ```
-#define METABINARY_LINK_MFN_DEF(_return, _namespace, _name, _index, _params, _args) \
-  MetaBinaryFunctionImpl<_return (_namespace::*) _params> _namespace::sfn_ ## _name ## _ ## _index \
-    (#_namespace "::" #_name "$" #_index);\
-  _return _namespace::_name _params { \
-    return (this ->* _namespace :: sfn_ ## _name ## _ ## _index) _args; \
+#define METABINARY_LINK_MFN(_return, _namespace, _name, _index, _params, _args) \
+  inline static MetaBinaryFunctionImpl<_return (_namespace::*) _params> \
+    __sfn_ ## _name ## _ ## _index ## __ { \
+      #_namespace "::" #_name "$" #_index \
+    }; \
+  inline _return _name _params { \
+    return (this ->* __sfn_ ## _name ## _ ## _index ## __) _args; \
   }
 
 // Note: Declare linking a virtual function as an ordinary member function via
 //       MetaBinary. Usage is similar to `METABINARY_LINK_MFN_DECL`.
-#define METABINARY_LINK_MVFN_DECL(_return, _namespace, _name, _index, _params) \
-  static MetaBinaryVirtualFunctionImpl<_return (_namespace::*) _params> sfn_ ## _name ## _ ## _index; \
-  _return _name _params;
-
-// Note: Define linking a virtual function as an ordinary member function via
-//       MetaBinary. Usage is similar to `METABINARY_LINK_MFN_DEF`.
-#define METABINARY_LINK_MVFN_DEF(_return, _namespace, _name, _index, _params, _args) \
-  MetaBinaryVirtualFunctionImpl<_return (_namespace::*) _params> _namespace::sfn_ ## _name  ## _ ## _index \
-    (#_namespace "::" #_name "$" #_index); \
-  _return _namespace::_name _params { \
-    return (this ->* _namespace::sfn_ ## _name  ## _ ## _index) _args; \
+#define METABINARY_LINK_MVFN(_return, _namespace, _name, _index, _params, _args) \
+  inline static MetaBinaryVirtualFunctionImpl<_return (_namespace::*) _params> \
+    __sfn_ ## _name ## _ ## _index ## __ { \
+      #_namespace "::" #_name "$" #_index \
+    }; \
+  inline _return _name _params { \
+    return (this ->* __sfn_ ## _name  ## _ ## _index ## __) _args; \
   }
 
 // Note: Declare hooking a member (virtual) function via MetaBinary. Place this
@@ -530,26 +514,27 @@ private:
 // ```
 #define METABINARY_HOOK_MFN(_namespace, _name, _index, _detour) \
   static MetaBinaryHookRedirect hook_ ## _namespace ## _ ## _name ## _ ## _index = { \
-    _namespace::sfn_ ## _name  ## _ ## _index, \
+    _namespace::__sfn_ ## _name  ## _ ## _index ## __, \
     _detour \
   };
 
-// Note: Define a global function linked via MetaBinary. This macro must be
+// Note: Declare a global function linked via MetaBinary. This macro must be
 //       placed within the namespace where the function's declaration resides;
 //       afterward, it can be called just like a normal member function.
 //
 // Example:
 // ```
-// namespace Hook { PCMetaClass GetMetaClassById(u32 id); }
 // namespace Hook {
-// METABINARY_LINK_FN_DEF(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
+// METABINARY_LINK_FN_DECL(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
 // }
 // ```
-#define METABINARY_LINK_FN_DEF(_return, _name, _index, _params, _args) \
-  static MetaBinaryFunctionImpl<decltype(&_name)> sfn_ ## _name ## _ ## _index \
-    (#_name "$" #_index);\
-  _return _name _params {\
-    return sfn_ ## _name ## _ ## _index _args; \
+#define METABINARY_LINK_FN(_return, _name, _index, _params, _args) \
+  inline MetaBinaryFunctionImpl<_return (*) _params> \
+    __sfn_ ## _name ## _ ## _index ## __ { \
+      #_name "$" #_index \
+    }; \
+  inline _return _name _params { \
+    return __sfn_ ## _name ## _ ## _index ## __ _args; \
   }
 
 // Note: Define a hook function for a global function linked via MetaBinary. This
@@ -566,18 +551,18 @@ private:
 // }
 // ```
 #define METABINARY_HOOK_FN(_return, _name, _index, _params) \
-  static _return hfn ## _ ## _name ## _ ## _index _params;\
-  static MetaBinaryHookRedirect hook_ ## _name ## _ ## _index = { \
-    sfn_ ## _name ## _ ## _index, \
-    reinterpret_cast<uintptr_t>(hfn ## _ ## _name ## _ ## _index) \
+  inline _return __hfn ## _ ## _name ## _ ## _index ## __ _params;\
+  inline MetaBinaryHookRedirect __hook_ ## _name ## _ ## _index = { \
+    __sfn_ ## _name ## _ ## _index ## __, \
+    reinterpret_cast<uintptr_t>(__hfn ## _ ## _name ## _ ## _index ## __) \
   };\
-  static _return hfn ## _ ## _name ## _ ## _index _params
+  inline _return __hfn ## _ ## _name ## _ ## _index ## __ _params
 
 // Note: Get the symbol of a MetaBinary linked function.
 //
 // Example:
 // METABINARY_FN(BaseHooks, GetMetaClassById, 0).Hook();
 #define METABINARY_FN(_namespace, _name, _index) \
-  _namespace :: sfn_ ## _name ## _ ## _index
+  (_namespace :: __sfn_ ## _name ## _ ## _index ## __)
 
 #endif

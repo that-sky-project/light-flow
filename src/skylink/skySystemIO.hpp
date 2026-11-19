@@ -7,7 +7,7 @@ class SystemIO {
 public:
   virtual ~SystemIO() = default;
 
-  METABINARY_LINK_MVFN_DECL(bool, SystemIO, IsCapturingMovie, 0, ())
+  METABINARY_LINK_MVFN(bool, SystemIO, IsCapturingMovie, 0, (), ())
 };
 
 #endif
