@@ -13,7 +13,7 @@ struct RenderTarget {
   u08 textureCount;
   u08 _pad0[7];
 
-  Texture *GetTexture(i32 index);
+  Texture *GetTexture(u32 index);
 };
 
 class Renderer {

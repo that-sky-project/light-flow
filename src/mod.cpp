@@ -6,6 +6,7 @@
 #include "metabinary/platform/lowLevel.hpp"
 #include "metabinary/binaryDescriptor.hpp"
 #include "metabinary/metabinary.hpp"
+#include "record/lightflow.hpp"
 
 std::wstring GetModuleFolder(HMODULE module) {
   wchar_t path[MAX_PATH] = {0};
@@ -82,6 +83,9 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(
   }
   LOG("MetaBinarySystem initialized");
 
+  auto *lightFlowMod = new LightFlowMod();
+  lightFlowMod->Initialize();
+
   return HT_SUCCESS;
 }
 
@@ -101,6 +105,8 @@ __declspec(dllexport) void HTMLAPI HTModRenderGui(
       ctxex.ctx.pImAllocatorUserData
     );
   }
+
+  GetLightFlowMod()->BuildScene();
 
   (void)timeElapesed;
 }
