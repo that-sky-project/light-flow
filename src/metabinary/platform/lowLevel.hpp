@@ -1,5 +1,5 @@
-#ifndef __API_LOWLEVEL_LOWLEVELUTILS_HH__
-#define __API_LOWLEVEL_LOWLEVELUTILS_HH__
+#ifndef __API_LOWLEVEL_LOWLEVELUTILS_HPP__
+#define __API_LOWLEVEL_LOWLEVELUTILS_HPP__
 
 #include <Windows.h>
 #include "utils/types.hpp"

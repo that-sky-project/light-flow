@@ -1,5 +1,5 @@
-#ifndef __UTILS_ASSERT_HH__
-#define __UTILS_ASSERT_HH__
+#ifndef __UTILS_ASSERT_HPP__
+#define __UTILS_ASSERT_HPP__
 
 #include <stdlib.h>
 #include <stdarg.h>

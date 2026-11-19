@@ -1,5 +1,5 @@
-#ifndef __UTILS_STRINGUTILS_HH__
-#define __UTILS_STRINGUTILS_HH__
+#ifndef __UTILS_STRINGUTILS_HPP__
+#define __UTILS_STRINGUTILS_HPP__
 
 #include <string.h>
 #include "utils/types.hpp"

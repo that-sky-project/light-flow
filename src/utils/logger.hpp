@@ -1,5 +1,5 @@
-#ifndef __UTILS_LOGGER_HH__
-#define __UTILS_LOGGER_HH__
+#ifndef __UTILS_LOGGER_HPP__
+#define __UTILS_LOGGER_HPP__
 
 #include <htmodloader/htmodloader.h>
 

@@ -1,5 +1,5 @@
-#ifndef __API_MOD_ASSEMBLY_METABINARY_HH__
-#define __API_MOD_ASSEMBLY_METABINARY_HH__
+#ifndef __API_MOD_ASSEMBLY_METABINARY_HPP__
+#define __API_MOD_ASSEMBLY_METABINARY_HPP__
 
 #include <type_traits>
 #include <utility>
