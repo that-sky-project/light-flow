@@ -1,5 +1,5 @@
-#ifndef __API_UTILS_ABIMISC_HH__
-#define __API_UTILS_ABIMISC_HH__
+#ifndef __UTILS_ABIMISC_HH__
+#define __UTILS_ABIMISC_HH__
 
 #include <string.h>
 #include <string_view>

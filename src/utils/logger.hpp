@@ -1,14 +1,33 @@
-#ifndef __API_MOD_LOGGER_HH__
-#define __API_MOD_LOGGER_HH__
+#ifndef __UTILS_LOGGER_HH__
+#define __UTILS_LOGGER_HH__
 
 #include <htmodloader/htmodloader.h>
 
-// The original FLAME logger wrote to flame.log through OsApi. This project
-// only targets Win64 and already has the HTModLoader console, so the same LOG
-// macros are routed there directly.
-#define LOG(msg, ...) HTTellText("[light-flow] " msg, ## __VA_ARGS__)
-#define LOGI(msg, ...) HTTellText("[light-flow][I] " msg, ## __VA_ARGS__)
-#define LOGW(msg, ...) HTTellText("[light-flow][W] " msg, ## __VA_ARGS__)
-#define LOGE(msg, ...) HTTellText("[light-flow][E] " msg, ## __VA_ARGS__)
+#include <fstream>
+#include <iostream>
+#include "utils/types.hpp"
+
+#define LOG(msg, ...) GetLogger()->Log(nullptr, (msg), ## __VA_ARGS__)
+#define LOGI(msg, ...) GetLogger()->Log("[I]", (msg), ## __VA_ARGS__)
+#define LOGW(msg, ...) GetLogger()->Log("[W]", (msg), ## __VA_ARGS__)
+#define LOGE(msg, ...) GetLogger()->Log("[E]", (msg), ## __VA_ARGS__)
+
+class Logger {
+public:
+  Logger() = default;
+  ~Logger() = default;
+
+  void Initialize(const std::wstring &path);
+  void Terminate();
+
+  void Log(cstring tag, cstring format, ...);
+  void Logv(cstring tag, cstring format, va_list va);
+
+public:
+  std::wstring m_path = L"";
+  std::ofstream m_fstream = {};
+};
+
+Logger *GetLogger();
 
 #endif

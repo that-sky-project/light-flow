@@ -19,6 +19,21 @@
     <Filter Include="src\gui">
       <UniqueIdentifier>{2f8d9b0a-7583-47cf-9bb4-54964ada15fb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\metabinary">
+      <UniqueIdentifier>{0ef626ab-3b1a-46eb-9a1d-105ebd7323dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\metabinary\platform">
+      <UniqueIdentifier>{b62abd61-79e6-42f5-a853-12f102e73d71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries">
+      <UniqueIdentifier>{8af54604-c443-4ea7-a12f-f78191eee438}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\imgui">
+      <UniqueIdentifier>{3a5a016e-72e2-4cc7-be92-7f7f09b4151e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libraries\hde">
+      <UniqueIdentifier>{2e57c67c-6a1c-48e3-8673-f576473387f3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\utils\types.hpp">
@@ -54,6 +69,42 @@
     <ClInclude Include="..\src\skylink\skyCompositor.hpp">
       <Filter>src\skylink</Filter>
     </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imstb_textedit.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imstb_rectpack.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imstb_truetype.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imgui_internal.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imgui.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\imgui\imconfig.h">
+      <Filter>libraries\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\hde\hde64.h">
+      <Filter>libraries\hde</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\hde\table64.h">
+      <Filter>libraries\hde</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\metabinary\metabinary.hpp">
+      <Filter>src\metabinary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\metabinary\binaryDescriptor.hpp">
+      <Filter>src\metabinary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\metabinary\binaryDescPatternMatch.hpp">
+      <Filter>src\metabinary</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\metabinary\platform\lowLevel.hpp">
+      <Filter>src\metabinary\platform</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\utils\assert.cpp">
@@ -70,6 +121,44 @@
     </ClCompile>
     <ClCompile Include="..\src\skylink\link\skyTexture.cpp">
       <Filter>src\skylink\link</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dllmain.cpp" />
+    <ClCompile Include="..\src\mod.cpp" />
+    <ClCompile Include="..\libraries\imgui\imgui_widgets.cpp">
+      <Filter>libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libraries\imgui\imgui_tables.cpp">
+      <Filter>libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libraries\imgui\imgui_draw.cpp">
+      <Filter>libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libraries\imgui\imgui.cpp">
+      <Filter>libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libraries\hde\hde64.c">
+      <Filter>libraries\hde</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\platform\archx64.cpp">
+      <Filter>src\metabinary\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\platform\htmodloader.cpp">
+      <Filter>src\metabinary\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\platform\win64syscall.cpp">
+      <Filter>src\metabinary\platform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\metabinary.cpp">
+      <Filter>src\metabinary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\binaryDescriptor.cpp">
+      <Filter>src\metabinary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\metabinary\binaryDescPatternMatch.cpp">
+      <Filter>src\metabinary</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\logger.cpp">
+      <Filter>src\utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

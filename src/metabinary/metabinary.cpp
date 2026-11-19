@@ -12,16 +12,19 @@ static MetaBinarySystem *g_metaBinarySystem = nullptr;
 void MetaBinarySystem::Initialize(
   BinaryDescriptorBarn *binaryDescriptorBarn
 ) {
-  ASSERTMSG(!g_metaBinarySystem, "MetaBinarySystem is a singleton and must be initialized only once.");
+  if (g_metaBinarySystem)
+    return;
+
   g_metaBinarySystem = this;
 
   for (auto *p = MetaBinaryLister<MetaBinaryFunction>::m_List(); p; p = p->GetPrev()) {
     auto it = m_functions.find(p->GetName());
     if (it != m_functions.end()) {
-      ASSERTMSG(false,
+      LOGW(
         "Duplicated name of MetaBinaryFunction [%s], please check the initializ"
         "ation code.",
         p->GetName());
+      continue;
     }
 
     m_functions[p->GetName()] = p;
@@ -30,10 +33,11 @@ void MetaBinarySystem::Initialize(
   for (auto *p = MetaBinaryLister<MetaBinaryVirtualFunction>::m_List(); p; p = p->GetPrev()) {
     auto it = m_virtualFunctions.find(p->GetName());
     if (it != m_virtualFunctions.end()) {
-      ASSERTMSG(false,
+      LOGW(
         "Duplicated name of MetaBinaryVirtualFunction [%s], please check the in"
         "itialization code.",
         p->GetName());
+      continue;
     }
 
     m_virtualFunctions[p->GetName()] = p;
@@ -44,7 +48,7 @@ void MetaBinarySystem::Initialize(
     p->Activate();
   }
 
-  m_LogDescriptors(binaryDescriptorBarn);
+  m_CheckDescriptors(binaryDescriptorBarn);
   m_AssignDescriptors(binaryDescriptorBarn);
 }
 
@@ -52,7 +56,7 @@ void MetaBinarySystem::Terminate() {
   g_metaBinarySystem = nullptr;
 }
 
-void MetaBinarySystem::m_LogDescriptors(
+void MetaBinarySystem::m_CheckDescriptors(
   BinaryDescriptorBarn *binaryDescriptorBarn
 ) {
   for (auto &it: m_functions) {
@@ -61,10 +65,12 @@ void MetaBinarySystem::m_LogDescriptors(
     auto desc = binaryDescriptorBarn->GetDescriptorByName(name);
     if (!desc) {
       LOGW("Descriptor [%s] not found.", name);
+      m_hasError = true;
       continue;
     }
     if (!desc->IsValid()) {
       LOGW("Descriptor [%s] is invalid.", name);
+      m_hasError = true;
       continue;
     }
   }
@@ -75,48 +81,37 @@ void MetaBinarySystem::m_LogDescriptors(
     auto desc = binaryDescriptorBarn->GetDescriptorByName(name);
     if (!desc) {
       LOGW("Descriptor [%s] not found.", name);
+      m_hasError = true;
       continue;
     }
     if (!desc->IsValid()) {
       LOGW("Descriptor [%s] is invalid.", name);
+      m_hasError = true;
       continue;
     }
   }
-}
-
-static inline const BinaryDescriptor *s_CheckDesciptor(
-  BinaryDescriptorBarn *binaryDescriptorBarn,
-  cstring name
-) {
-  const BinaryDescriptor *desc = binaryDescriptorBarn->GetDescriptorByName(name);
-
-  ASSERTMSG(desc,
-    "Descriptor [%s] not found. Was it omitted when writing the description file?",
-    name);
-
-  ASSERTMSG(desc->IsValid(),
-    "Descriptor [%s] is invalid. Please update the description file.",
-    name);
-
-  return desc;
 }
 
 void MetaBinarySystem::m_AssignDescriptors(
   BinaryDescriptorBarn *binaryDescriptorBarn
 ) {
+  size_t count = 0;
   for (auto &it: m_functions) {
     auto *mbf = it.second;
-    const BinaryDescriptor *desc = s_CheckDesciptor(binaryDescriptorBarn, mbf->GetName());
+    const auto *desc = binaryDescriptorBarn->GetDescriptorByName(mbf->GetName());
     mbf->Initialize(desc->GetResult());
+    count++;
   }
 
-  LOG("Initialized %llu MetaBinaryFunction", m_functions.size());
+  LOG("Initialized %llu of %llu MetaBinaryFunction", count, m_functions.size());
 
+  count = 0;
   for (auto &it: m_virtualFunctions) {
     auto *mbvf = it.second;
-    const BinaryDescriptor *desc = s_CheckDesciptor(binaryDescriptorBarn, mbvf->GetName());
+    const auto *desc = binaryDescriptorBarn->GetDescriptorByName(mbvf->GetName());
     mbvf->Initialize((i32)desc->GetResult());
+    count++;
   }
 
-  LOG("Initialized %llu MetaBinaryVirtualFunction", m_virtualFunctions.size());
+  LOG("Initialized %llu of %llu MetaBinaryVirtualFunction", count, m_virtualFunctions.size());
 }

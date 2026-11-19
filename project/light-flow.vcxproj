@@ -50,6 +50,7 @@
     <ClCompile Include="..\src\skylink\link\skySystemIO.cpp" />
     <ClCompile Include="..\src\skylink\link\skyTexture.cpp" />
     <ClCompile Include="..\src\utils\assert.cpp" />
+    <ClCompile Include="..\src\utils\logger.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

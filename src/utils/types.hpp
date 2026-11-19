@@ -1,5 +1,5 @@
-#ifndef __TYPES_HPP__
-#define __TYPES_HPP__
+#ifndef __UTILS_TYPES_HPP__
+#define __UTILS_TYPES_HPP__
 
 #include <stddef.h>
 #include <stdint.h>

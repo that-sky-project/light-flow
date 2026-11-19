@@ -442,15 +442,19 @@ public:
   MetaBinarySystem() = default;
   ~MetaBinarySystem() = default;
 
+  inline bool IsValid() const { return m_hasError; }
+
   void Initialize(BinaryDescriptorBarn *binaryDescriptorBarn);
   void Terminate();
 
 private:
-  void m_LogDescriptors(BinaryDescriptorBarn *binaryDescriptorBarn);
+  void m_CheckDescriptors(BinaryDescriptorBarn *binaryDescriptorBarn);
   void m_AssignDescriptors(BinaryDescriptorBarn *binaryDescriptorBarn);
 
   std::unordered_map<TgcString, MetaBinaryFunction *> m_functions = {};
   std::unordered_map<TgcString, MetaBinaryVirtualFunction *> m_virtualFunctions = {};
+
+  bool m_hasError = false;
 };
 
 // ----------------------------------------------------------------------------

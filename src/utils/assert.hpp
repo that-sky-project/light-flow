@@ -1,5 +1,5 @@
-#ifndef __API_MOD_ASSERT_HH__
-#define __API_MOD_ASSERT_HH__
+#ifndef __UTILS_ASSERT_HH__
+#define __UTILS_ASSERT_HH__
 
 #include <stdlib.h>
 #include <stdarg.h>

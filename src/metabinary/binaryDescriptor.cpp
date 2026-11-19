@@ -178,7 +178,8 @@ void BinaryDescriptor::Initialize(
   cstring name,
   const InitTypedef &init
 ) {
-  ASSERT(!m_initialized);
+  if (m_initialized)
+    return;
 
   m_name = name;
 
@@ -192,10 +193,8 @@ void BinaryDescriptor::Initialize(
 
   // Use the address of the signature by default.
   m_match.Initialize(init.match ? init.match : "$@");
-  ASSERTMSG(m_match.IsValid(),
-    "Invalid pattern expression [%s] in [%s]",
-    init.match,
-    m_name.c_str());
+  if (!m_match.IsValid())
+    LOGW("Invalid pattern expression [%s] in [%s]", init.match, m_name.c_str());
 
   m_initialized = true;
 }
@@ -330,7 +329,9 @@ static void s_ReadDescFromJson(
 void BinaryDescriptorBarn::Initialize(
   cstring json
 ) {
-  ASSERTMSG(!g_binaryDescriptorBarn, "BinaryDescriptorBarn is a singleton and must be initialized only once.");
+  if (g_binaryDescriptorBarn)
+    return;
+
   g_binaryDescriptorBarn = this;
 
   rapidjson::Document root;
