@@ -3,9 +3,7 @@
 
 #include <type_traits>
 #include <utility>
-#include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include "utils/types.hpp"
 #include "utils/abiMisc.hpp"
 #include "utils/assert.hpp"
@@ -135,10 +133,10 @@ public:
 
     ASSERT(IsValid() && !IsHookEnabled());
 
-    m_hook = CreateHook(tag, m_address, m_detour, &m_trampoline);
+    m_hook = HTModLoader::CreateHook(tag, m_address, m_detour, &m_trampoline);
     ASSERT(m_hook);
 
-    EnableHook(m_hook);
+    HTModLoader::EnableHook(m_hook);
 
     m_hookEnabled = true;
   }
@@ -149,8 +147,8 @@ public:
 
     ASSERT(IsValid() && IsHookEnabled());
 
-    DisableHook(m_hook);
-    DeleteHook(m_hook);
+    HTModLoader::DisableHook(m_hook);
+    HTModLoader::DeleteHook(m_hook);
 
     m_hookEnabled = false;
     m_hook = 0;
@@ -447,8 +445,6 @@ public:
   void Initialize(BinaryDescriptorBarn *binaryDescriptorBarn);
   void Terminate();
 
-  void HotLoad();
-
 private:
   void m_LogDescriptors(BinaryDescriptorBarn *binaryDescriptorBarn);
   void m_AssignDescriptors(BinaryDescriptorBarn *binaryDescriptorBarn);
@@ -469,16 +465,16 @@ private:
 // ```
 // class Game {
 // public:
-//   FL_METABINARY_LINK_MFN_DECL(void, Game, Alloc, 0, ())
+//   METABINARY_LINK_MFN_DECL(void, Game, Alloc, 0, ())
 // };
 //
 // class Test {
 // public:
-//   FL_METABINARY_LINK_MFN_DECL(void, Test, Func, 0, (int))
-//   FL_METABINARY_LINK_MFN_DECL(void, Test, Func, 1, (float))
+//   METABINARY_LINK_MFN_DECL(void, Test, Func, 0, (int))
+//   METABINARY_LINK_MFN_DECL(void, Test, Func, 1, (float))
 // };
 // ```
-#define FL_METABINARY_LINK_MFN_DECL(_return, _namespace, _name, _index, _params) \
+#define METABINARY_LINK_MFN_DECL(_return, _namespace, _name, _index, _params) \
   static MetaBinaryFunctionImpl<_return (_namespace::*) _params> sfn_ ## _name ## _ ## _index; \
   _return _name _params;
 
@@ -488,11 +484,11 @@ private:
 //
 // Example:
 // ```
-// FL_METABINARY_LINK_MFN_DEF(void, Game, Alloc, 0, (), ())
-// FL_METABINARY_LINK_MFN_DEF(void, Test, Func, 0, (int i0), (i0))
-// FL_METABINARY_LINK_MFN_DEF(void, Test, Func, 1, (float f0), (f0))
+// METABINARY_LINK_MFN_DEF(void, Game, Alloc, 0, (), ())
+// METABINARY_LINK_MFN_DEF(void, Test, Func, 0, (int i0), (i0))
+// METABINARY_LINK_MFN_DEF(void, Test, Func, 1, (float f0), (f0))
 // ```
-#define FL_METABINARY_LINK_MFN_DEF(_return, _namespace, _name, _index, _params, _args) \
+#define METABINARY_LINK_MFN_DEF(_return, _namespace, _name, _index, _params, _args) \
   MetaBinaryFunctionImpl<_return (_namespace::*) _params> _namespace::sfn_ ## _name ## _ ## _index \
     (#_namespace "::" #_name "$" #_index);\
   _return _namespace::_name _params { \
@@ -500,14 +496,14 @@ private:
   }
 
 // Note: Declare linking a virtual function as an ordinary member function via
-//       MetaBinary. Usage is similar to `FL_METABINARY_LINK_MFN_DECL`.
-#define FL_METABINARY_LINK_MVFN_DECL(_return, _namespace, _name, _index, _params) \
+//       MetaBinary. Usage is similar to `METABINARY_LINK_MFN_DECL`.
+#define METABINARY_LINK_MVFN_DECL(_return, _namespace, _name, _index, _params) \
   static MetaBinaryVirtualFunctionImpl<_return (_namespace::*) _params> sfn_ ## _name ## _ ## _index; \
   _return _name _params;
 
 // Note: Define linking a virtual function as an ordinary member function via
-//       MetaBinary. Usage is similar to `FL_METABINARY_LINK_MFN_DEF`.
-#define FL_METABINARY_LINK_MVFN_DEF(_return, _namespace, _name, _index, _params, _args) \
+//       MetaBinary. Usage is similar to `METABINARY_LINK_MFN_DEF`.
+#define METABINARY_LINK_MVFN_DEF(_return, _namespace, _name, _index, _params, _args) \
   MetaBinaryVirtualFunctionImpl<_return (_namespace::*) _params> _namespace::sfn_ ## _name  ## _ ## _index \
     (#_namespace "::" #_name "$" #_index); \
   _return _namespace::_name _params { \
@@ -526,9 +522,9 @@ private:
 //     // ...
 //   }
 // };
-// FL_METABINARY_HOOK_MFN(MetaSystem, Initialize, 0, &HOOK_MetaSystem::Initialize)
+// METABINARY_HOOK_MFN(MetaSystem, Initialize, 0, &HOOK_MetaSystem::Initialize)
 // ```
-#define FL_METABINARY_HOOK_MFN(_namespace, _name, _index, _detour) \
+#define METABINARY_HOOK_MFN(_namespace, _name, _index, _detour) \
   static MetaBinaryHookRedirect hook_ ## _namespace ## _ ## _name ## _ ## _index = { \
     _namespace::sfn_ ## _name  ## _ ## _index, \
     _detour \
@@ -542,10 +538,10 @@ private:
 // ```
 // namespace Hook { PCMetaClass GetMetaClassById(u32 id); }
 // namespace Hook {
-// FL_METABINARY_LINK_FN_DEF(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
+// METABINARY_LINK_FN_DEF(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
 // }
 // ```
-#define FL_METABINARY_LINK_FN_DEF(_return, _name, _index, _params, _args) \
+#define METABINARY_LINK_FN_DEF(_return, _name, _index, _params, _args) \
   static MetaBinaryFunctionImpl<decltype(&_name)> sfn_ ## _name ## _ ## _index \
     (#_name "$" #_index);\
   _return _name _params {\
@@ -558,14 +554,14 @@ private:
 // Example:
 // ```
 // namespace Hook {
-// FL_METABINARY_HOOK_FN(PCMetaClass, GetMetaClassById, 0, (u32 id)) {
+// METABINARY_HOOK_FN(PCMetaClass, GetMetaClassById, 0, (u32 id)) {
 //   if (!GetOverride())
 //     return GetMetaClassById(id);
 //   return ::GetMetaClassById(id);
 // }
 // }
 // ```
-#define FL_METABINARY_HOOK_FN(_return, _name, _index, _params) \
+#define METABINARY_HOOK_FN(_return, _name, _index, _params) \
   static _return hfn ## _ ## _name ## _ ## _index _params;\
   static MetaBinaryHookRedirect hook_ ## _name ## _ ## _index = { \
     sfn_ ## _name ## _ ## _index, \
@@ -576,8 +572,8 @@ private:
 // Note: Get the symbol of a MetaBinary linked function.
 //
 // Example:
-// FL_METABINARY_FN(BaseHooks, GetMetaClassById, 0).Hook();
-#define FL_METABINARY_FN(_namespace, _name, _index) \
+// METABINARY_FN(BaseHooks, GetMetaClassById, 0).Hook();
+#define METABINARY_FN(_namespace, _name, _index) \
   _namespace :: sfn_ ## _name ## _ ## _index
 
 #endif
