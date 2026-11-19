@@ -182,7 +182,7 @@ void BinaryDescriptor::Initialize(
 
   m_name = name;
 
-  m_module = GetDlModule(init.module);
+  m_module = Win64SysCall::GetDlModule(init.module);
   m_rva = init.rva;
   m_slot = init.slot;
 
@@ -238,7 +238,7 @@ void BinaryDescriptor::Evaluate() {
   // The signature goes first: it survives the code moving, which is the whole
   // point of scanning for one. Skipped when the descriptor carries none.
   if (m_patternLen)
-    addr = ScanPattern(m_module, m_pattern, m_mask, m_patternLen);
+    addr = HTModLoader::ScanPattern(m_module, m_pattern, m_mask, m_patternLen);
 
   // Fall back to the RVA when the scan came up empty, and use it outright for a
   // descriptor with no signature at all. GetDlModule() hands back the module
@@ -258,8 +258,8 @@ void BinaryDescriptor::Evaluate() {
   //
   // Only the matched bytes are read. Reading the padding too would fail the
   // whole descriptor whenever the sequence sits at the end of a section.
-  std::vector<u08> inst(m_patternLen + GetArch()->GetMaxInsnLength());
-  if (m_patternLen && !ReadMemory(addr, inst.data(), m_patternLen))
+  std::vector<u08> inst(m_patternLen + ArchX64::GetMaxInsnLength());
+  if (m_patternLen && !Win64SysCall::ReadMemory(addr, inst.data(), m_patternLen))
     return;
 
   if (!m_match.Solve(inst.data(), addr, m_patternLen, &m_result))
@@ -339,7 +339,7 @@ void BinaryDescriptorBarn::Initialize(
   if (root.HasParseError() || !root.IsObject())
     return;
 
-  cstring tag = GetArch()->GetTag();
+  cstring tag = ArchX64::GetTag();
   if (!root.HasMember(tag) || !root[tag].IsObject())
     return;
 

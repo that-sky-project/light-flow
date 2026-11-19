@@ -1,6 +1,7 @@
 #ifndef __API_LOWLEVEL_LOWLEVELUTILS_HH__
 #define __API_LOWLEVEL_LOWLEVELUTILS_HH__
 
+#include <Windows.h>
 #include "utils/types.hpp"
 #include "utils/assert.hpp"
 
@@ -37,6 +38,9 @@ bool WriteMemory(uintptr_t addr, const u08 *src, size_t size);
 // ----------------------------------------------------------------------------
 
 namespace HTModLoader {
+
+HMODULE GetCurrentModuleHandle();
+void SetCurrentModuleHandle(HMODULE hModule);
 
 // Scan the main executable with a byte/mask pattern.
 uintptr_t ScanPattern(uintptr_t module, const u08 *pattern, const u08 *masks, u32 length);
@@ -117,6 +121,10 @@ struct Insn {
   // only when a kImmKind_Rel immediate is present.
   uintptr_t target;
 };
+
+inline cstring GetTag() {
+  return "x64";
+}
 
 // Longest encoding the target admits, for sizing relocation buffers.
 u32 GetMaxInsnLength();

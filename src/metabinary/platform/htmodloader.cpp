@@ -9,21 +9,6 @@
 // [SECTION] LowLevel
 // ----------------------------------------------------------------------------
 
-static HMODULE s_GetCurrentModuleHandle() {
-  HMODULE hModule = nullptr;
-  if (::GetModuleHandleExA(
-    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-    (LPCSTR)s_GetCurrentModuleHandle,
-    &hModule))
-  {
-    return hModule;
-  }
-  return nullptr;
-}
-
-namespace HTModLoader {
-
 // Since HTModLoader does not have bitwise mask, so we consider every mask byte
 // that is not 0xFF to be "?".
 static TgcString s_BuildHTPattern(
@@ -48,6 +33,18 @@ static TgcString s_BuildHTPattern(
   return result;
 }
 
+static HMODULE g_hModule = nullptr;
+
+namespace HTModLoader {
+
+HMODULE GetCurrentModuleHandle() {
+  return g_hModule;
+}
+
+void SetCurrentModuleHandle(HMODULE hModule) {
+  g_hModule = hModule;
+}
+
 uintptr_t ScanPattern(
   uintptr_t module,
   const u08 *pattern,
@@ -66,7 +63,7 @@ uintptr_t CreateHook(
   uintptr_t detour,
   uintptr_t *trampoline
 ) {
-  HMODULE hModule = s_GetCurrentModuleHandle();
+  HMODULE hModule = GetCurrentModuleHandle();
   LowLevelErrorCheck(hModule, "Cannot find the current module handle");
 
   HTAsmFunction sfn = { tag, (void *)func, (void *)detour, nullptr };
@@ -91,7 +88,7 @@ void DeleteHook(
 void EnableHook(
   uintptr_t hHook
 ) {
-  HMODULE hModule = s_GetCurrentModuleHandle();
+  HMODULE hModule = GetCurrentModuleHandle();
   HTStatus s = ::HTAsmHookEnable(hModule, (void *)hHook);
   LowLevelErrorCheck(
     s == HT_SUCCESS,
@@ -103,7 +100,7 @@ void EnableHook(
 void DisableHook(
   uintptr_t hHook
 ) {
-  HMODULE hModule = s_GetCurrentModuleHandle();
+  HMODULE hModule = GetCurrentModuleHandle();
   HTStatus s = ::HTAsmHookDisable(hModule, (void *)hHook);
   LowLevelErrorCheck(
     s == HT_SUCCESS,

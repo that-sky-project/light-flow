@@ -1,5 +1,5 @@
 #include <string.h>
-#include "hde64.h"
+#include <hde64.h>
 #include "metabinary/platform/lowLevel.hpp"
 
 // Shorthands for the nested types. Members of ArchX64 pick these up from
@@ -121,6 +121,10 @@ static void s_ClassifyFlow(
 }
 
 namespace ArchX64 {
+
+u32 GetMaxInsnLength() {
+  return 15;
+}
 
 u32 AlignLength(
   const void *code,

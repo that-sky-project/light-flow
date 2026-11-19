@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\libraries\hde\hde64.h" />
+    <ClInclude Include="..\libraries\hde\table64.h" />
+    <ClInclude Include="..\libraries\imgui\imconfig.h" />
+    <ClInclude Include="..\libraries\imgui\imgui.h" />
+    <ClInclude Include="..\libraries\imgui\imgui_internal.h" />
+    <ClInclude Include="..\libraries\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\libraries\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\libraries\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\src\metabinary\binaryDescPatternMatch.hpp" />
+    <ClInclude Include="..\src\metabinary\binaryDescriptor.hpp" />
+    <ClInclude Include="..\src\metabinary\metabinary.hpp" />
+    <ClInclude Include="..\src\metabinary\platform\lowLevel.hpp" />
+    <ClInclude Include="..\src\skylink\skyCompositor.hpp" />
+    <ClInclude Include="..\src\skylink\skyGfx.hpp" />
+    <ClInclude Include="..\src\skylink\skyRenderer.hpp" />
+    <ClInclude Include="..\src\skylink\skySystemIO.hpp" />
+    <ClInclude Include="..\src\skylink\skyTexture.hpp" />
+    <ClInclude Include="..\src\skylink\skyTypePlaceholders.hpp" />
+    <ClInclude Include="..\src\utils\abiMisc.hpp" />
+    <ClInclude Include="..\src\utils\assert.hpp" />
+    <ClInclude Include="..\src\utils\logger.hpp" />
+    <ClInclude Include="..\src\utils\stringUtils.hpp" />
+    <ClInclude Include="..\src\utils\types.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\libraries\hde\hde64.c" />
+    <ClCompile Include="..\libraries\imgui\imgui.cpp" />
+    <ClCompile Include="..\libraries\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\libraries\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\libraries\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\src\dllmain.cpp" />
+    <ClCompile Include="..\src\metabinary\binaryDescPatternMatch.cpp" />
+    <ClCompile Include="..\src\metabinary\binaryDescriptor.cpp" />
+    <ClCompile Include="..\src\metabinary\metabinary.cpp" />
+    <ClCompile Include="..\src\metabinary\platform\archx64.cpp" />
+    <ClCompile Include="..\src\metabinary\platform\htmodloader.cpp" />
+    <ClCompile Include="..\src\metabinary\platform\win64syscall.cpp" />
+    <ClCompile Include="..\src\skylink\link\skyCompositor.cpp" />
+    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp" />
+    <ClCompile Include="..\src\skylink\link\skySystemIO.cpp" />
+    <ClCompile Include="..\src\skylink\link\skyTexture.cpp" />
+    <ClCompile Include="..\src\utils\assert.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{f962e353-3766-414f-b7ca-9ec6670dcc40}</ProjectGuid>
+    <RootNamespace>lightflow</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>light-flow</TargetName>
+    <OutDir>$(ProjectDir)..\dist\</OutDir>
+    <IntDir>$(ProjectDir)dist\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\libraries\hde;$(ProjectDir)..\libraries\imgui;$(ProjectDir)..\libraries\htmodloader\include;$(ProjectDir)..\libraries\ffmpeg\include;$(ProjectDir)..\libraries\rapidjson\include;$(ProjectDir)..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <EnableVectorLength>VectorLength256</EnableVectorLength>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\libraries\htmodloader\lib;$(ProjectDir)..\libraries\ffmpeg\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>htmodloader.lib;avformat.lib;avcodec.lib;avutil.lib;swscale.lib;swresample.lib;comdlg32.lib;shell32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyRuntimeFiles" AfterTargets="Build">
+    <ItemGroup>
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avutil-61.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swresample-7.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swscale-10.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avcodec-63.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avformat-63.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LightFlowRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(OutDir)Data\Manifests" />
+    <Copy SourceFiles="$(ProjectDir)..\data\BinaryDescriptor.json" DestinationFolder="$(OutDir)Data\Manifests" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\manifest.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

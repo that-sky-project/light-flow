@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{c04894e2-d1fb-4183-92e2-b6164b86b9be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\utils">
+      <UniqueIdentifier>{b43e87b8-6e41-4a9a-bd43-3e95a3c228fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\skylink">
+      <UniqueIdentifier>{13f2b6af-347e-4abd-993e-3448bd2b876f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\skylink\link">
+      <UniqueIdentifier>{f4933df8-8d14-45d7-bde7-98daffc85a6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\record">
+      <UniqueIdentifier>{6b8e952d-032d-4a8a-a601-322b9c92f7af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gui">
+      <UniqueIdentifier>{2f8d9b0a-7583-47cf-9bb4-54964ada15fb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\utils\types.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\stringUtils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\logger.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\assert.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\abiMisc.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skyTypePlaceholders.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skyTexture.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skySystemIO.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skyRenderer.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skyGfx.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\skylink\skyCompositor.hpp">
+      <Filter>src\skylink</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\utils\assert.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\skylink\link\skyCompositor.cpp">
+      <Filter>src\skylink\link</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp">
+      <Filter>src\skylink\link</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\skylink\link\skySystemIO.cpp">
+      <Filter>src\skylink\link</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\skylink\link\skyTexture.cpp">
+      <Filter>src\skylink\link</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
