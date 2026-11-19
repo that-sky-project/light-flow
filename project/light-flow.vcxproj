@@ -44,6 +44,7 @@
     <ClCompile Include="..\src\metabinary\platform\archx64.cpp" />
     <ClCompile Include="..\src\metabinary\platform\htmodloader.cpp" />
     <ClCompile Include="..\src\metabinary\platform\win64syscall.cpp" />
+    <ClCompile Include="..\src\mod.cpp" />
     <ClCompile Include="..\src\skylink\link\skyCompositor.cpp" />
     <ClCompile Include="..\src\skylink\link\skyRenderer.cpp" />
     <ClCompile Include="..\src\skylink\link\skySystemIO.cpp" />
