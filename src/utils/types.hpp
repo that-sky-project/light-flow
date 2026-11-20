@@ -24,6 +24,7 @@ typedef void *any;
 
 typedef const char *cstring;
 typedef std::string TgcString;
+typedef std::wstring TgcWString;
 
 template<typename T, usize N>
 constexpr usize countof(const T (&)[N]) noexcept { return N; }
