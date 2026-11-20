@@ -89,9 +89,6 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
   ImGui::SetNextWindowSize(ImVec2(560.0f, 0.0f), ImGuiCond_FirstUseEver);
 
   if (ImGui::Begin("Light Flow", &open, ImGuiWindowFlags_AlwaysAutoResize)) {
-    ImGui::TextWrapped(
-      "Captures the game's rtScreenshot render target and encodes it with "
-      "FFmpeg. Press F9 to start or stop recording.");
     ImGui::TextDisabled("Game profile: %s", GetGameProfileName(mod->m_profile));
     ImGui::Separator();
 
@@ -187,7 +184,7 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
     bool coreDisabled = mod->IsCoreDisabled();
     ImGui::BeginDisabled(coreDisabled);
     if (ImGui::Button(
-      mod->m_capturing ? "Stop recording (F9)" : "Start recording (F9)",
+      mod->m_capturing ? "Stop recording" : "Start recording",
       ImVec2(220.0f, 0.0f)
     ))
       mod->ToggleCapture();
