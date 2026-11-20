@@ -55,13 +55,16 @@ using PFN_AssertHandler = void (*)(cstring, cstring, cstring, u32, u32);
 
 void SetAssertHandler(PFN_AssertHandler handler);
 
+// NOTE: These macros never terminate the process. A mod must not crash the
+// game because of its own bookkeeping, so a failed assertion is reported to the
+// handler and execution continues. Callers that cannot safely continue are
+// expected to check their inputs and degrade gracefully instead of relying on
+// the assertion.
 #define ASSERT(expr) \
   do {\
     constexpr cstring FILENAME = Private::FileName(__FILE__);\
     if (!(expr)) {\
       Private::AssertImpl(#expr, FILENAME, __LINE__, 1);\
-      __debugbreak();\
-      abort();\
     }\
   } while (0)
 
@@ -70,8 +73,6 @@ void SetAssertHandler(PFN_AssertHandler handler);
     constexpr cstring FILENAME = Private::FileName(__FILE__);\
     if (!(expr)) {\
       Private::AssertMsgImpl(#expr, FILENAME, __LINE__, 1, msg, ## __VA_ARGS__);\
-      __debugbreak();\
-      abort();\
     }\
   } while (0)
 

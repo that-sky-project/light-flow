@@ -1,8 +1,10 @@
-#include <stdlib.h>
+﻿#include <stdlib.h>
+#include <vector>
 #include <rapidjson/document.h>
-#include "utils/assert.hpp"
 #include "utils/logger.hpp"
-#include "platform/lowlevel.hpp"
+#include "utils/archUtils.hpp"
+#include "utils/loaderUtils.hpp"
+#include "utils/winapicall.hpp"
 #include "metabinary/binaryDescriptor.hpp"
 
 // Windows.h (pulled in by htmodloader.h) defines GetObject, which collides
@@ -102,8 +104,13 @@ static void s_BuildPattern(
   const bool isByteWildcard = (mask == nullptr);
 
   u64 patternLen = 0;
-  if (!s_CountSignature(pattern, isByteWildcard, &patternLen))
-    ASSERTMSG(false, "Invalid pattern [%s]", pattern);
+  if (!s_CountSignature(pattern, isByteWildcard, &patternLen)) {
+    LOGW("Invalid pattern [%s]", pattern);
+    *outPattern = nullptr;
+    *outMask = nullptr;
+    *outLength = 0;
+    return;
+  }
 
   if (patternLen == 0) {
     *outPattern = nullptr;
@@ -113,13 +120,23 @@ static void s_BuildPattern(
   }
 
   // ScanPattern() takes the length as a u32.
-  ASSERTMSG(patternLen <= 0xFFFFFFFFull, "Signature is too long");
+  if (patternLen > 0xFFFFFFFFull) {
+    LOGW("Signature is too long [%s]", pattern);
+    *outPattern = nullptr;
+    *outMask = nullptr;
+    *outLength = 0;
+    return;
+  }
 
   u64 maskLen = 0;
   if (!isByteWildcard) {
-    if (!s_CountSignature(mask, false, &maskLen))
-      ASSERTMSG(false, "Invalid pattern [%s]", pattern);
-    ASSERTMSG(maskLen == patternLen, "Signature pattern/mask length mismatch");
+    if (!s_CountSignature(mask, false, &maskLen) || maskLen != patternLen) {
+      LOGW("Signature pattern/mask length mismatch [%s] [%s]", pattern, mask);
+      *outPattern = nullptr;
+      *outMask = nullptr;
+      *outLength = 0;
+      return;
+    }
   } else {
     maskLen = patternLen;
   }
@@ -130,6 +147,7 @@ static void s_BuildPattern(
   const char *p = pattern;
   const char *m = mask;
   u64 i = 0;
+  bool valid = true;
   while (*p) {
     while (*p == ' ' || *p == '\t')
       p++;
@@ -152,11 +170,24 @@ static void s_BuildPattern(
         while (*m == ' ' || *m == '\t')
           m++;
         u08 mk;
-        s_ReadHexByte(&m, &mk);
+        if (!s_ReadHexByte(&m, &mk)) {
+          valid = false;
+          break;
+        }
         masks[i] = mk;
       }
     }
     i++;
+  }
+
+  if (!valid) {
+    LOGW("Invalid mask [%s] for pattern [%s]", mask, pattern);
+    delete[] bytes;
+    delete[] masks;
+    *outPattern = nullptr;
+    *outMask = nullptr;
+    *outLength = 0;
+    return;
   }
 
   *outPattern = bytes;

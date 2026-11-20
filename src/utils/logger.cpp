@@ -36,7 +36,10 @@ void Logger::Logv(
   cstring format,
   va_list va
 ) {
-  if (!m_fstream.is_open() || !format) return;
+  if (!format) return;
+
+  std::lock_guard<std::mutex> lock(m_mutex);
+  if (!m_fstream.is_open()) return;
   if (tag) m_fstream << tag << " ";
 
   char stackBuf[512];

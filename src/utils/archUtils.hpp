@@ -1,77 +1,10 @@
-#ifndef __API_LOWLEVEL_LOWLEVELUTILS_HPP__
-#define __API_LOWLEVEL_LOWLEVELUTILS_HPP__
+#ifndef __UTILS_ARCHUTILS_HPP__
+#define __UTILS_ARCHUTILS_HPP__
 
-#include <Windows.h>
 #include "utils/types.hpp"
-#include "utils/assert.hpp"
-
-// ----------------------------------------------------------------------------
-// [SECTION] LowLevel Utils
-// ----------------------------------------------------------------------------
-
-void LowLevelErrorHandler(cstring file, int line, cstring msg, ...);
-
-#define LowLevelErrorCheck(expr, msg, ...) \
-  do {\
-    constexpr cstring FILENAME = Private::FileName(__FILE__);\
-    ((void)(!(expr) && (LowLevelErrorHandler(FILENAME, __LINE__, msg, ## __VA_ARGS__), __debugbreak(), abort(), 1)));\
-  } while (0)
-
-// ----------------------------------------------------------------------------
-// [SECTION] OsApi
-// ----------------------------------------------------------------------------
-
-namespace Win64SysCall {
-
-// Get the handle (base address) of a dynamic module.
-uintptr_t GetDlModule(cstring name);
-
-// Read process memory.
-bool ReadMemory(uintptr_t addr, u08 *dst, size_t size);
-// Write process memory.
-bool WriteMemory(uintptr_t addr, const u08 *src, size_t size);
-
-} // namespace Win64SysCall
-
-// ----------------------------------------------------------------------------
-// [SECTION] LowLevel
-// ----------------------------------------------------------------------------
-
-namespace HTModLoader {
-
-HMODULE GetCurrentModuleHandle();
-void SetCurrentModuleHandle(HMODULE hModule);
-
-// Load or save mod settings.
-bool LoadSetting(cstring key, TgcString *result);
-bool LoadSetting(cstring key, f64 *result);
-bool LoadSetting(cstring key, i32 *result);
-bool LoadSetting(cstring key, bool *result);
-
-bool SaveSetting(cstring key, const TgcString &result);
-bool SaveSetting(cstring key, f64 result);
-bool SaveSetting(cstring key, i32 result);
-bool SaveSetting(cstring key, bool result);
-
-// Scan the main executable with a byte/mask pattern.
-uintptr_t ScanPattern(uintptr_t module, const u08 *pattern, const u08 *masks, u32 length);
-
-// Create a hook with HTModLoader. The hook is not enabled yet.
-uintptr_t CreateHook(cstring tag, uintptr_t func, uintptr_t detour, uintptr_t *trampoline);
-// HTModLoader has no API to delete a hook; this only disables it.
-void DeleteHook(uintptr_t hHook);
-
-void EnableHook(uintptr_t hHook);
-void DisableHook(uintptr_t hHook);
-
-} // namespace HTModLoader
-
-// ----------------------------------------------------------------------------
-// [SECTION] Arch
-// ----------------------------------------------------------------------------
 
 // Arch-neutral view over a single decoded instruction, backed by hde64 on
-// x86-64 (ArchX64) and by disarm64 on AArch64 (ArchArm64).
+// x86-64 (ArchX64).
 //
 // The point of this layer is the immediate list. A single instruction can
 // carry more than one constant on both architectures, and pattern scanning
@@ -79,8 +12,6 @@ void DisableHook(uintptr_t hHook);
 //
 //   x86-64  "mov dword ptr [rax+0x18], 0x1234"  -> disp8 0x18, imm32 0x1234
 //   x86-64  "enter 0x10, 0x02"                  -> imm16 0x10, imm8 0x02
-//   AArch64 "ubfx x0, x1, #4, #8"               -> immr 4, imms 11
-//   AArch64 "movk x0, #0x1234, lsl #16"         -> imm16 0x1234, shift 16
 namespace ArchX64 {
 
 // x86-64 tops out at three (SIB scale + disp + imm); AArch64 reaches four
@@ -88,7 +19,7 @@ namespace ArchX64 {
 // being exact-fit.
 constexpr u32 kMaxImms = 5;
 
-enum ImmKind : u08 {
+enum ImmKind: u08 {
   // Literal operand encoded in the instruction (x64 imm8/16/32/64, AArch64
   // #imm operands).
   kImmKind_Imm = 0,

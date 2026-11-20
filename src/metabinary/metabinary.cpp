@@ -1,7 +1,7 @@
 #include "utils/stringUtils.hpp"
 #include "utils/logger.hpp"
-#include "binaryDescriptor.hpp"
-#include "metabinary.hpp"
+#include "metabinary/binaryDescriptor.hpp"
+#include "metabinary/metabinary.hpp"
 
 // ----------------------------------------------------------------------------
 // [SECTION] MetaBinarySystem
@@ -102,6 +102,11 @@ void MetaBinarySystem::m_AssignDescriptors(
     if (!desc || !desc->IsValid())
       continue;
     mbf->Initialize(desc->GetResult());
+    if (!mbf->IsInitialized()) {
+      LOGW("Descriptor [%s] did not yield an executable address.", mbf->GetName());
+      m_hasError = true;
+      continue;
+    }
     count++;
   }
 

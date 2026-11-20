@@ -55,7 +55,8 @@ void AppendSimple(
   TgcWString &path,
   const TgcWString &s);
 
-bool PathUtils::IsAbsolute(
+// Check whether `path` is an absolute path.
+bool IsAbsolute(
   const TgcWString &path);
 
 }

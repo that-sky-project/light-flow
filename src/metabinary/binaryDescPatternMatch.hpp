@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "utils/types.hpp"
-#include "platform/lowlevel.hpp"
 
 // Simulated addressing over a matched instruction sequence.
 //

@@ -19,9 +19,6 @@
     <Filter Include="src\metabinary">
       <UniqueIdentifier>{0ef626ab-3b1a-46eb-9a1d-105ebd7323dd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\metabinary\platform">
-      <UniqueIdentifier>{b62abd61-79e6-42f5-a853-12f102e73d71}</UniqueIdentifier>
-    </Filter>
     <Filter Include="libraries">
       <UniqueIdentifier>{8af54604-c443-4ea7-a12f-f78191eee438}</UniqueIdentifier>
     </Filter>
@@ -99,8 +96,41 @@
     <ClInclude Include="..\src\metabinary\binaryDescPatternMatch.hpp">
       <Filter>src\metabinary</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\metabinary\platform\lowLevel.hpp">
-      <Filter>src\metabinary\platform</Filter>
+    <ClInclude Include="..\src\utils\archUtils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\fsUtils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\loaderUtils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\pathUtils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\utf8Utils.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\winapicall.hpp">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\modSettings.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\modui.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\frameGrabber.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\lightflow.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\sourcePixelFormat.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\videoEncoder.hpp">
+      <Filter>src\record</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -124,14 +154,29 @@
     <ClCompile Include="..\libraries\hde\hde64.c">
       <Filter>libraries\hde</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\metabinary\platform\archx64.cpp">
-      <Filter>src\metabinary\platform</Filter>
+    <ClCompile Include="..\src\utils\archUtils.cpp">
+      <Filter>src\utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\metabinary\platform\htmodloader.cpp">
-      <Filter>src\metabinary\platform</Filter>
+    <ClCompile Include="..\src\utils\fsUtils.cpp">
+      <Filter>src\utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\metabinary\platform\win64syscall.cpp">
-      <Filter>src\metabinary\platform</Filter>
+    <ClCompile Include="..\src\utils\loaderUtils.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\pathUtils.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\utf8Utils.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\winapicall.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\modSettings.cpp">
+      <Filter>src\record</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\modui.cpp">
+      <Filter>src\record</Filter>
     </ClCompile>
     <ClCompile Include="..\src\metabinary\metabinary.cpp">
       <Filter>src\metabinary</Filter>
@@ -144,6 +189,18 @@
     </ClCompile>
     <ClCompile Include="..\src\utils\logger.cpp">
       <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\frameGrabber.cpp">
+      <Filter>src\record</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\hook.cpp">
+      <Filter>src\record</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\lightflow.cpp">
+      <Filter>src\record</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\videoEncoder.cpp">
+      <Filter>src\record</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -1,9 +1,10 @@
-#include <Windows.h>
+﻿#include <Windows.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
 #include <htmodloader/htmodloader.h>
-#include "lowLevel.hpp"
+#include "utils/logger.hpp"
+#include "utils/loaderUtils.hpp"
 
 // ----------------------------------------------------------------------------
 // [SECTION] LowLevel
@@ -63,6 +64,13 @@ bool LoadSetting(cstring key, TgcString *result) {
   if (status != HT_SUCCESS)
     return false;
 
+  // `written` may include the terminating null, and the loader is allowed to
+  // report a smaller count than cch.
+  if (written <= cch)
+    buffer.resize(written);
+  while (!buffer.empty() && buffer.back() == '\0')
+    buffer.pop_back();
+
   *result = buffer;
   return true;
 }
@@ -73,12 +81,13 @@ bool LoadSetting(cstring key, bool *result) {
 
   HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
 
-  bool buffer;
+  // A Bool option occupies a Windows BOOL (4 bytes), not a C++ bool.
+  BOOL buffer = FALSE;
   HTStatus status = HTOptionGetCustom(hModule, key, HTOptionType_Bool, &buffer, nullptr);
   if (status != HT_SUCCESS)
     return false;
 
-  *result = buffer;
+  *result = buffer != FALSE;
   return true;
 }
 
@@ -114,7 +123,8 @@ bool SaveSetting(cstring key, const TgcString &value) {
 
 bool SaveSetting(cstring key, bool value) {
   HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
-  return HTOptionSetCustom(hModule, key, HTOptionType_Bool, &value) == HT_SUCCESS
+  BOOL buffer = value ? TRUE : FALSE;
+  return HTOptionSetCustom(hModule, key, HTOptionType_Bool, &buffer) == HT_SUCCESS
     ? true
     : false;
 }
@@ -153,17 +163,25 @@ uintptr_t CreateHook(
   uintptr_t *trampoline
 ) {
   HMODULE hModule = GetCurrentModuleHandle();
-  LowLevelErrorCheck(hModule, "Cannot find the current module handle");
+  if (!hModule) {
+    LOGW("CreateHook(%s): no module handle", tag);
+    return 0;
+  }
 
   HTAsmFunction sfn = { tag, (void *)func, (void *)detour, nullptr };
   HTStatus s = ::HTAsmHookCreate(hModule, &sfn);
-  LowLevelErrorCheck(
-    s == HT_SUCCESS,
-    "Error: %d at call %s, exiting app..",
-    ::HTGetLastError(),
-    "CreateHook()");
+  if (s != HT_SUCCESS || !sfn.fn) {
+    LOGW(
+      "CreateHook(%s) failed: error %d",
+      tag,
+      (int)::HTGetLastError());
+    return 0;
+  }
 
-  *trampoline = (uintptr_t)sfn.origin;
+  // HTAsmHookCreate writes the trampoline into the function descriptor, but
+  // some loader builds only fill it after the hook is enabled.
+  if (trampoline)
+    *trampoline = (uintptr_t)sfn.origin;
   return (uintptr_t)sfn.fn;
 }
 
@@ -174,44 +192,34 @@ void DeleteHook(
   // HTModLoader didn't provide any API to remove a hook.
 }
 
-void EnableHook(
+bool EnableHook(
   uintptr_t hHook
 ) {
   HMODULE hModule = GetCurrentModuleHandle();
+  if (!hModule || !hHook)
+    return false;
+
   HTStatus s = ::HTAsmHookEnable(hModule, (void *)hHook);
-  LowLevelErrorCheck(
-    s == HT_SUCCESS,
-    "Error: %d at call %s, exiting app..",
-    ::HTGetLastError(),
-    "EnableHook()");
+  if (s != HT_SUCCESS) {
+    LOGW("EnableHook failed: error %d", (int)::HTGetLastError());
+    return false;
+  }
+  return true;
 }
 
-void DisableHook(
+bool DisableHook(
   uintptr_t hHook
 ) {
   HMODULE hModule = GetCurrentModuleHandle();
+  if (!hModule || !hHook)
+    return false;
+
   HTStatus s = ::HTAsmHookDisable(hModule, (void *)hHook);
-  LowLevelErrorCheck(
-    s == HT_SUCCESS,
-    "Error: %d at call %s, exiting app..",
-    ::HTGetLastError(),
-    "DisableHook()");
+  if (s != HT_SUCCESS) {
+    LOGW("DisableHook failed: error %d", (int)::HTGetLastError());
+    return false;
+  }
+  return true;
 }
 
 } // namespace HTModLoader
-
-void LowLevelErrorHandler(
-  cstring file,
-  int line,
-  cstring msg,
-  ...
-) {
-  char buffer[1024];
-
-  va_list va;
-  va_start(va, msg);
-  vsnprintf(buffer, sizeof(buffer), msg, va);
-  va_end(va);
-
-  HTTellText("[light-flow][LowLevel] %s (%d): %s", file, line, buffer);
-}
