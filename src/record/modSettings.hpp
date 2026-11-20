@@ -17,6 +17,9 @@ struct Settings {
   i32 queueSize = 4;
   bool forceMovieMode = true;
   bool showOverlay = true;
+  // Exchange the red and blue channels of every captured frame before it is
+  // handed to the encoder.
+  bool swapRedBlue = false;
 
   void Load();
   void Save() const;

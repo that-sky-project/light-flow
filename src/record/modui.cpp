@@ -167,6 +167,12 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
       mod->m_settings.showOverlay = showOverlay;
     }
 
+    bool swapRedBlue = mod->m_swapRedBlue;
+    if (ImGui::Checkbox("Swap R&B", &swapRedBlue)) {
+      mod->m_swapRedBlue = swapRedBlue;
+      mod->m_settings.swapRedBlue = swapRedBlue;
+    }
+
     ImGui::Spacing();
     ImGui::Separator();
 

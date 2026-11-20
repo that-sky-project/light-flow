@@ -137,6 +137,7 @@ private:
   bool m_capturing = false;
   bool m_forceMovie = true;
   bool m_showOverlay = true;
+  bool m_swapRedBlue = false;
   i32 m_targetFps = 30;
   i32 m_queueLimit = 4;
   bool m_screenshotPendingThisFrame = false;

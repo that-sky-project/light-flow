@@ -139,6 +139,7 @@ void LightFlowMod::Shutdown() {
 void LightFlowMod::SyncSettingsToUi() {
   m_forceMovie = m_settings.forceMovieMode;
   m_showOverlay = m_settings.showOverlay;
+  m_swapRedBlue = m_settings.swapRedBlue;
   m_targetFps = m_settings.targetFps;
   m_queueLimit = std::max(1, m_settings.queueSize);
 }
@@ -217,6 +218,7 @@ void LightFlowMod::StartCapture() {
   m_activeFps = m_settings.targetFps > 0 ? m_settings.targetFps : 30;
   m_forceMovie = m_settings.forceMovieMode;
   m_showOverlay = m_settings.showOverlay;
+  m_swapRedBlue = m_settings.swapRedBlue;
   m_targetFps = m_settings.targetFps;
   m_queueLimit = std::max(1, m_settings.queueSize);
 
@@ -481,10 +483,9 @@ void LightFlowMod::OnCompositorRender(
     return;
   }
 
-  // Tonemap_movie is compiled with the "BGR" define, unlike
-  // Tonemap_screenshot. When we forced movie mode, the pixels in
-  // rtScreenshot are therefore BGR-ordered regardless of the VkFormat.
-  if (movieMode)
+  // Optional user correction for builds/shaders that store the red and blue
+  // channels the other way around.
+  if (m_swapRedBlue)
     pixelFormat = SwapRedBlue(pixelFormat);
 
   {
@@ -492,13 +493,14 @@ void LightFlowMod::OnCompositorRender(
     if (!loggedFormat) {
       loggedFormat = true;
       LOG(
-        "rtScreenshot: logical=%u VkFormat=%u %dx%d movie=%d -> source "
-        "format %d",
+        "rtScreenshot: logical=%u VkFormat=%u %dx%d movie=%d swap=%d -> "
+        "source format %d",
         gfxFormat,
         vkFormat,
         width,
         height,
         movieMode ? 1 : 0,
+        m_swapRedBlue ? 1 : 0,
         static_cast<int>(pixelFormat));
     }
   }
