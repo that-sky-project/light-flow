@@ -6,40 +6,9 @@
 #include <unordered_map>
 #include "utils/types.hpp"
 #include "utils/abiMisc.hpp"
-#include "utils/assert.hpp"
 #include "utils/logger.hpp"
 #include "utils/loaderUtils.hpp"
 #include "metabinary/binaryDescriptor.hpp"
-
-// ----------------------------------------------------------------------------
-// [SECTION] PseudoClass
-// ----------------------------------------------------------------------------
-
-// A base class for creating hooks on class member functions. Hook classes can
-// be created by inheriting from this class:
-// 
-// class hook_Game: public PseudoClass<hook_Game> {
-// public:
-//   void Initialize() { }
-// };
-//
-// Subclasses can also be used as type placeholders, provided that the distinction
-// between the detour and the original member function is clearly defined.
-//
-// This class is only used for hooking member functions where the object layout
-// is incomplete or uncertain (in most cases). If a complete memory layout is
-// available, you can create hooks by inheriting from a complete class and declaring
-// functions in the derived class.
-//
-// Note that detours declared with this method can only be non-virtual functions.
-// Passing a pointer to a virtual member function as the detour results in undefined
-// behavior. Since MetaBinary erases the type traits of the detour function, it is
-// possible to use member functions with entirely unrelated types as detours, as
-// long as their addresses are valid (i.e., non-virtual).
-template<typename Hook>
-class PseudoClass {
-  uintptr_t Cast() { return reinterpret_cast<uintptr_t>(static_cast<Hook>(this)); }
-};
 
 // ----------------------------------------------------------------------------
 // [SECTION] BinaryCallMixin
