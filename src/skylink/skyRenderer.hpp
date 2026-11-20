@@ -1,8 +1,6 @@
 #ifndef __SKYLINK_SKYRENDERER_HPP__
 #define __SKYLINK_SKYRENDERER_HPP__
 
-#include <cstddef>
-
 #include "utils/types.hpp"
 #include "metabinary/metabinary.hpp"
 #include "skylink/skyTexture.hpp"

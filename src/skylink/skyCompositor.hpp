@@ -3,7 +3,10 @@
 
 #include "utils/types.hpp"
 #include "metabinary/metabinary.hpp"
-#include "skylink/skyTypePlaceholders.hpp"
+
+class JobBarn;
+class CameraSystem;
+class SystemUI;
 
 class Compositor {
 public:
@@ -13,12 +16,8 @@ public:
   )
 };
 
-// Compositor field layouts. The two releases are built from different engine
-// revisions, so nearly every member moved. Keep the offsets next to the
-// structure they describe; the active layout is selected in record/lightflow.
-//
-// The render target table is not listed here: it is learned at runtime from
-// FindRenderTarget()'s arguments (see record/hook.cpp).
+// TODO: We need to remove all layout hardcoding and use hook or metabinary.
+
 struct CompositorLayout {
   usize outputMode;
   usize screenshotRequested;
@@ -26,7 +25,6 @@ struct CompositorLayout {
   usize systemIO;
 };
 
-// Sky_dump (NetEase / Chinese edition).
 inline constexpr CompositorLayout kCompositorLayoutNetease = {
   /* outputMode */ 4132,
   /* screenshotRequested */ 4230,
@@ -34,7 +32,6 @@ inline constexpr CompositorLayout kCompositorLayoutNetease = {
   /* systemIO */ 6248,
 };
 
-// Sky-32.2-260129 (TGC / international edition).
 inline constexpr CompositorLayout kCompositorLayoutTgc = {
   /* outputMode */ 12,
   /* screenshotRequested */ 88,
@@ -42,7 +39,6 @@ inline constexpr CompositorLayout kCompositorLayoutTgc = {
   /* systemIO */ 480,
 };
 
-// VulkanRenderer's texture bookkeeping, as read by FrameGrabber.
 struct RendererLayout {
   usize textureRecords;
   usize textureRecordStride;
