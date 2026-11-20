@@ -1,5 +1,7 @@
 #include <limits>
 #include "utils/types.hpp"
+#include "utils/archUtils.hpp"
+#include "utils/winapicall.hpp"
 #include "metabinary/binaryDescPatternMatch.hpp"
 
 namespace {

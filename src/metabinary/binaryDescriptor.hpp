@@ -2,6 +2,7 @@
 #define __API_MOD_ASSEMBLY_BINARYDESCRIPTOR_HPP__
 
 #include <map>
+#include <vector>
 #include "utils/types.hpp"
 #include "metabinary/binaryDescPatternMatch.hpp"
 
@@ -15,15 +16,27 @@ public:
   // the signature alone.
   static constexpr u64 kInvalidRva = 0xFFFFFFFFFFFFFFFFull;
 
-  struct InitTypedef {
-    cstring module = nullptr;
-    u64 rva = kInvalidRva;
+  // One candidate signature: a byte pattern with an optional bit mask and the
+  // expression that turns a match into the descriptor's result.
+  struct SignatureInit {
     cstring pattern = nullptr;
     cstring mask = nullptr;
     cstring match = nullptr;
+  };
+
+  struct InitTypedef {
+    cstring module = nullptr;
+    u64 rva = kInvalidRva;
+    // Signatures are tried top to bottom. The first one that both scans and
+    // evaluates successfully wins; the others are ignored. A JSON "sig" object
+    // (the legacy form) is read as a single-element list.
+    std::vector<SignatureInit> signatures = {};
     // Virtual function descriptors do not resolve to an address. They carry
     // the vtable slot index instead; MetaBinaryVirtualFunction::Initialize()
-    // consumes GetResult() as that index.
+    // consumes GetResult() as that index. When the signature list resolves
+    // nothing, this value is used as the fallback, just like `rva` is for an
+    // ordinary function descriptor. A signature used here must evaluate to the
+    // slot index (e.g. `$0:0 / 8` on a `call qword ptr [reg+disp32]` site).
     i32 slot = -1;
   };
 
@@ -47,6 +60,14 @@ public:
   void Evaluate();
 
 private:
+  // A compiled candidate signature.
+  struct Signature {
+    std::vector<u08> pattern = {};
+    std::vector<u08> mask = {};
+    BinaryDescPattern match = {};
+    bool valid = false;
+  };
+
   // Name of the descriptor.
   TgcString m_name = "";
   // Module handle returned by OsApi::GetDlModule().
@@ -55,12 +76,8 @@ private:
   u64 m_rva = kInvalidRva;
   // Vtable slot index for virtual function descriptors, or -1.
   i32 m_slot = -1;
-  // Byte sequence.
-  const u08 *m_pattern = nullptr;
-  const u08 *m_mask = nullptr;
-  u32 m_patternLen = 0;
-  // Pattern expression.
-  BinaryDescPattern m_match = {};
+  // Candidate signatures, in declaration order.
+  std::vector<Signature> m_signatures = {};
   // Evaluated result.
   i64 m_result = 0;
   // Flags.
@@ -77,7 +94,11 @@ public:
   BinaryDescriptorBarn() = default;
   ~BinaryDescriptorBarn() = default;
 
-  void Initialize(cstring json);
+  // `profile` selects a top-level object of the JSON document, e.g. "tgc" or
+  // "netease". Each profile owns an "x64" descriptor list. When the profile is
+  // null, missing or has no matching arch list, the root object is used so a
+  // single-profile descriptor file keeps working.
+  void Initialize(cstring json, cstring profile = nullptr);
   void Terminate();
 
   const BinaryDescriptor *GetDescriptorByName(cstring name);

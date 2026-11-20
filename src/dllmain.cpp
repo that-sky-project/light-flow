@@ -1,5 +1,5 @@
-#include <Windows.h>
-#include "metabinary/platform/lowLevel.hpp"
+﻿#include <Windows.h>
+#include "utils/loaderUtils.hpp"
 
 BOOL APIENTRY DllMain(
   HMODULE hModule,

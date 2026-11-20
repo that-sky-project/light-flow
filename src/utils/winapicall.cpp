@@ -1,11 +1,26 @@
 #include <Windows.h>
-#include "lowLevel.hpp"
+#include "utils/winapicall.hpp"
 
 // ----------------------------------------------------------------------------
 // [SECTION] OsApi
 // ----------------------------------------------------------------------------
 
 namespace Win64SysCall {
+
+TgcWString GetModuleFolder(HMODULE module) {
+  wchar_t path[MAX_PATH] = {0};
+  DWORD length = GetModuleFileNameW(module, path, MAX_PATH);
+
+  if (length == 0)
+    return L".";
+
+  std::wstring result(path, length);
+  usize separator = result.find_last_of(L"\\/");
+  if (separator == std::wstring::npos)
+    return L".";
+
+  return result.substr(0, separator);
+}
 
 uintptr_t GetDlModule(cstring name) {
   return (uintptr_t)::GetModuleHandleA(name);

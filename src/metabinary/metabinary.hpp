@@ -6,39 +6,9 @@
 #include <unordered_map>
 #include "utils/types.hpp"
 #include "utils/abiMisc.hpp"
-#include "utils/assert.hpp"
-#include "metabinary/platform/lowLevel.hpp"
+#include "utils/logger.hpp"
+#include "utils/loaderUtils.hpp"
 #include "metabinary/binaryDescriptor.hpp"
-
-// ----------------------------------------------------------------------------
-// [SECTION] PseudoClass
-// ----------------------------------------------------------------------------
-
-// A base class for creating hooks on class member functions. Hook classes can
-// be created by inheriting from this class:
-// 
-// class hook_Game: public PseudoClass<hook_Game> {
-// public:
-//   void Initialize() { }
-// };
-//
-// Subclasses can also be used as type placeholders, provided that the distinction
-// between the detour and the original member function is clearly defined.
-//
-// This class is only used for hooking member functions where the object layout
-// is incomplete or uncertain (in most cases). If a complete memory layout is
-// available, you can create hooks by inheriting from a complete class and declaring
-// functions in the derived class.
-//
-// Note that detours declared with this method can only be non-virtual functions.
-// Passing a pointer to a virtual member function as the detour results in undefined
-// behavior. Since MetaBinary erases the type traits of the detour function, it is
-// possible to use member functions with entirely unrelated types as detours, as
-// long as their addresses are valid (i.e., non-virtual).
-template<typename Hook>
-class PseudoClass {
-  uintptr_t Cast() { return reinterpret_cast<uintptr_t>(static_cast<Hook>(this)); }
-};
 
 // ----------------------------------------------------------------------------
 // [SECTION] BinaryCallMixin
@@ -54,9 +24,19 @@ struct BinaryCallMixin {
   inline auto Call(U &&...args) const
     -> decltype(std::declval<PFN>()(std::forward<U>(args)...))
   {
+    using Ret = decltype(std::declval<PFN>()(std::forward<U>(args)...));
+
     const Derived *d = static_cast<const Derived *>(this);
-    ASSERTMSG(d->Function().IsValid(),
-      "Try to call uninitialized function %s", d->GetName());
+    if (!d->Function().IsValid()) {
+      // Unresolved link. Returning a default value keeps the game alive; the
+      // descriptor check has already logged which function is missing.
+      LOGW("Call to uninitialized function %s", d->GetName());
+      if constexpr (!std::is_void_v<Ret>)
+        return Ret{};
+      else
+        return;
+    }
+
     PFN fn = reinterpret_cast<PFN>(d->Function().Original());
     return fn(std::forward<U>(args)...);
   }
@@ -111,8 +91,14 @@ public:
 
   // Initialize the function with the given address.
   inline void Initialize(uintptr_t address) {
-    ASSERT(!IsValid());
-    ASSERT(address);
+    if (IsValid()) {
+      LOGW("BinaryFunction initialized twice");
+      return;
+    }
+    if (!address) {
+      LOGW("BinaryFunction initialized with a null address");
+      return;
+    }
     m_address = address;
   }
 
@@ -124,28 +110,64 @@ public:
   }
 
   // Give a chance to redirect the detour function.
-  inline void Redirect(FuncPtr detour) { ASSERT(!IsValid()); m_detour = reinterpret_cast<uintptr_t>(detour); }
-  inline void Redirect(MemberFuncPtr detour) { ASSERT(!IsValid()); m_detour = detour == nullptr ? 0 : AbiMemFuncPtr(detour)->GetAddress(); }
+  inline void Redirect(FuncPtr detour) {
+    if (IsValid()) {
+      LOGW("Redirect after initialization is not supported");
+      return;
+    }
+    m_detour = reinterpret_cast<uintptr_t>(detour);
+  }
+  inline void Redirect(MemberFuncPtr detour) {
+    if (IsValid()) {
+      LOGW("Redirect after initialization is not supported");
+      return;
+    }
+    m_detour = detour == nullptr ? 0 : AbiMemFuncPtr(detour)->GetAddress();
+  }
 
   // Create and enable hook. Name is passed from the owning MetaObject.
-  inline void Hook(cstring tag) {
-    if (!Detour()) return;
+  inline bool Hook(cstring tag) {
+    if (!Detour())
+      return false;
 
-    ASSERT(IsValid() && !IsHookEnabled());
+    if (!IsValid() || IsHookEnabled()) {
+      LOGW("Hook(%s) called in an invalid state", tag ? tag : "?");
+      return false;
+    }
 
-    m_hook = HTModLoader::CreateHook(tag, m_address, m_detour, &m_trampoline);
-    ASSERT(m_hook);
+    uintptr_t trampoline = 0;
+    m_hook = HTModLoader::CreateHook(tag, m_address, m_detour, &trampoline);
+    if (!m_hook) {
+      LOGW("Hook(%s): CreateHook failed", tag ? tag : "?");
+      return false;
+    }
 
-    HTModLoader::EnableHook(m_hook);
+    if (!HTModLoader::EnableHook(m_hook)) {
+      LOGW("Hook(%s): EnableHook failed", tag ? tag : "?");
+      HTModLoader::DeleteHook(m_hook);
+      m_hook = 0;
+      return false;
+    }
 
+    // Without a trampoline the detour could not call the original function,
+    // and enabling such a hook would make every game call jump to null.
+    if (!trampoline) {
+      LOGW("Hook(%s): loader returned no trampoline", tag ? tag : "?");
+      HTModLoader::DisableHook(m_hook);
+      HTModLoader::DeleteHook(m_hook);
+      m_hook = 0;
+      return false;
+    }
+
+    m_trampoline = trampoline;
     m_hookEnabled = true;
+    return true;
   }
 
   // Remove hook.
   inline void Unhook() {
-    if (!Detour()) return;
-
-    ASSERT(IsValid() && IsHookEnabled());
+    if (!Detour() || !IsHookEnabled())
+      return;
 
     HTModLoader::DisableHook(m_hook);
     HTModLoader::DeleteHook(m_hook);
@@ -226,7 +248,7 @@ public:
   inline bool IsInitialized() const { return m_func.IsValid(); }
   inline void Initialize(uintptr_t address) { m_func.Initialize(address); }
   inline void Terminate() { m_func.Terminate(); }
-  inline void Hook() { m_func.Hook(GetName()); }
+  inline bool Hook() { return m_func.Hook(GetName()); }
   inline void Unhook() { m_func.Unhook(); }
 
   inline const BinaryFunctionBase &Function() const { return m_func; }
@@ -313,7 +335,11 @@ protected:
   { }
 
 public:
-  inline void Initialize(i32 vindex) { ASSERT(m_vindex == -1); m_vindex = vindex; }
+  inline void Initialize(i32 vindex) {
+    if (m_vindex != -1)
+      return;
+    m_vindex = vindex;
+  }
   inline void Terminate() { m_func.Terminate(); }
 
   // User must call this function to cache the vftable of any object.
@@ -321,17 +347,19 @@ public:
   inline void Cache(const Class *object) {
     static_assert(std::is_polymorphic<Class>::value,
       "MetaBinary: Object is not a polymorphic class.");
-    ASSERT(object);
+    if (!object)
+      return;
     Cache(*reinterpret_cast<const uintptr_t *const *>(object));
   }
 
   inline void Cache(const uintptr_t *vftable) {
-    ASSERT(vftable && m_vindex != -1);
+    if (!vftable || m_vindex == -1)
+      return;
     m_cache = vftable;
     m_func.Initialize(vftable[m_vindex]);
   }
 
-  inline void Hook() { m_func.Hook(GetName()); }
+  inline bool Hook() { return m_func.Hook(GetName()); }
   inline void Unhook() { m_func.Unhook(); }
 
   inline const BinaryFunctionBase &Function() const { return m_func; }
@@ -442,7 +470,7 @@ public:
   MetaBinarySystem() = default;
   ~MetaBinarySystem() = default;
 
-  inline bool IsValid() const { return m_hasError; }
+  inline bool IsValid() const { return !m_hasError; }
 
   void Initialize(BinaryDescriptorBarn *binaryDescriptorBarn);
   void Terminate();

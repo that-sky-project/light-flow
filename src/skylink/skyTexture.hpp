@@ -37,6 +37,9 @@ struct Texture {
   u08 unk_6;
   i16 unk_7;
 
+  // The NetEase build enlarged the texture slot to 128 bytes (the TGC build
+  // uses 104), so callers must index RenderTarget::texture[] with the size
+  // from RenderTargetLayout instead of sizeof(Texture).
   METABINARY_LINK_MFN(u32, Texture, GetReadableTexture, 0, (i32 index), (index))
 };
 

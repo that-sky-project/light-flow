@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include "utils/types.hpp"
 
 #define LOG(msg, ...) GetLogger()->Log(nullptr, (msg), ## __VA_ARGS__)
@@ -26,6 +27,7 @@ public:
 public:
   std::wstring m_path = L"";
   std::ofstream m_fstream = {};
+  std::mutex m_mutex = {};
 };
 
 Logger *GetLogger();

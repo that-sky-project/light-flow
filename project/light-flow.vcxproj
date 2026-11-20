@@ -18,7 +18,12 @@
     <ClInclude Include="..\src\metabinary\binaryDescPatternMatch.hpp" />
     <ClInclude Include="..\src\metabinary\binaryDescriptor.hpp" />
     <ClInclude Include="..\src\metabinary\metabinary.hpp" />
-    <ClInclude Include="..\src\metabinary\platform\lowLevel.hpp" />
+    <ClInclude Include="..\src\record\frameGrabber.hpp" />
+    <ClInclude Include="..\src\record\lightflow.hpp" />
+    <ClInclude Include="..\src\record\modSettings.hpp" />
+    <ClInclude Include="..\src\record\modui.hpp" />
+    <ClInclude Include="..\src\record\sourcePixelFormat.hpp" />
+    <ClInclude Include="..\src\record\videoEncoder.hpp" />
     <ClInclude Include="..\src\skylink\skyCompositor.hpp" />
     <ClInclude Include="..\src\skylink\skyGfx.hpp" />
     <ClInclude Include="..\src\skylink\skyRenderer.hpp" />
@@ -26,10 +31,15 @@
     <ClInclude Include="..\src\skylink\skyTexture.hpp" />
     <ClInclude Include="..\src\skylink\skyTypePlaceholders.hpp" />
     <ClInclude Include="..\src\utils\abiMisc.hpp" />
+    <ClInclude Include="..\src\utils\archUtils.hpp" />
     <ClInclude Include="..\src\utils\assert.hpp" />
+    <ClInclude Include="..\src\utils\fsUtils.hpp" />
+    <ClInclude Include="..\src\utils\loaderUtils.hpp" />
     <ClInclude Include="..\src\utils\logger.hpp" />
+    <ClInclude Include="..\src\utils\pathUtils.hpp" />
     <ClInclude Include="..\src\utils\stringUtils.hpp" />
     <ClInclude Include="..\src\utils\types.hpp" />
+    <ClInclude Include="..\src\utils\winapicall.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\libraries\hde\hde64.c" />
@@ -41,12 +51,21 @@
     <ClCompile Include="..\src\metabinary\binaryDescPatternMatch.cpp" />
     <ClCompile Include="..\src\metabinary\binaryDescriptor.cpp" />
     <ClCompile Include="..\src\metabinary\metabinary.cpp" />
-    <ClCompile Include="..\src\metabinary\platform\archx64.cpp" />
-    <ClCompile Include="..\src\metabinary\platform\htmodloader.cpp" />
-    <ClCompile Include="..\src\metabinary\platform\win64syscall.cpp" />
     <ClCompile Include="..\src\mod.cpp" />
+    <ClCompile Include="..\src\record\frameGrabber.cpp" />
+    <ClCompile Include="..\src\record\hook.cpp" />
+    <ClCompile Include="..\src\record\lightflow.cpp" />
+    <ClCompile Include="..\src\record\modSettings.cpp" />
+    <ClCompile Include="..\src\record\modui.cpp" />
+    <ClCompile Include="..\src\record\videoEncoder.cpp" />
+    <ClCompile Include="..\src\utils\archUtils.cpp" />
     <ClCompile Include="..\src\utils\assert.cpp" />
+    <ClCompile Include="..\src\utils\fsUtils.cpp" />
+    <ClCompile Include="..\src\utils\loaderUtils.cpp" />
     <ClCompile Include="..\src\utils\logger.cpp" />
+    <ClCompile Include="..\src\utils\pathUtils.cpp" />
+    <ClCompile Include="..\src\utils\utf8Utils.cpp" />
+    <ClCompile Include="..\src\utils\winapicall.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -112,7 +131,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(LightFlowRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <MakeDir Directories="$(OutDir)Data\Manifests" />
-    <Copy SourceFiles="$(ProjectDir)..\data\BinaryDescriptor.json" DestinationFolder="$(OutDir)Data\Manifests" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\Data\Manifests\BinaryDescriptor.json" DestinationFolder="$(OutDir)Data\Manifests" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\manifest.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
   <ImportGroup Label="ExtensionTargets">

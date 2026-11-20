@@ -1,12 +1,8 @@
 #ifndef __SKYLINK_SKYCOMPOSITOR_HPP__
 #define __SKYLINK_SKYCOMPOSITOR_HPP__
 
-#include <string>
-#include <vector>
-
 #include "utils/types.hpp"
 #include "metabinary/metabinary.hpp"
-#include "skylink/skyGfx.hpp"
 #include "skylink/skyTypePlaceholders.hpp"
 
 class Compositor {
@@ -17,32 +13,61 @@ public:
   )
 };
 
-namespace CompositorOffsets {
-  // Compositor fields.
-  constexpr usize kOutputMode = 12;
-  constexpr usize kScreenshotRequested = 88;
-  constexpr usize kFrameCounter = 316;
-  constexpr usize kSystemIO = 480;
-  constexpr usize kRenderTargetBarn = 544;
-  constexpr usize kRenderTargetArray = 146696;
-}
+// Compositor field layouts. The two releases are built from different engine
+// revisions, so nearly every member moved. Keep the offsets next to the
+// structure they describe; the active layout is selected in record/lightflow.
+//
+// The render target table is not listed here: it is learned at runtime from
+// FindRenderTarget()'s arguments (see record/hook.cpp).
+struct CompositorLayout {
+  usize outputMode;
+  usize screenshotRequested;
+  usize frameCounter;
+  usize systemIO;
+};
 
-// VulkanRenderer's texture bookkeeping. These fields are inspected by
-// VulkanRenderer::GetPixels(); validating them before calling it avoids its
-// internal abort() on non-CPU-readable textures.
-namespace RendererOffsets {
-  constexpr usize kTextureCapacity = 4112;
-  constexpr usize kTextureRecords = 4120;
-  constexpr usize kTextureAllocated = 4128;
-  constexpr usize kTextureRecordStride = 184;
-  constexpr usize kTextureRecordWidth = 100;
-  constexpr usize kTextureRecordHeight = 104;
-  constexpr usize kTextureRecordTiling = 124;
-  // The actual VkFormat after SuitableTextureFormat() workarounds.
-  constexpr usize kTextureRecordVkFormat = 96;
-  // The logical GfxTexelFormat the texture was requested with.
-  constexpr usize kTextureRecordFormat = 176;
-  constexpr u32 kTextureTilingLinear = 1;
-}
+// Sky_dump (NetEase / Chinese edition).
+inline constexpr CompositorLayout kCompositorLayoutNetease = {
+  /* outputMode */ 4132,
+  /* screenshotRequested */ 4230,
+  /* frameCounter */ 6080,
+  /* systemIO */ 6248,
+};
+
+// Sky-32.2-260129 (TGC / international edition).
+inline constexpr CompositorLayout kCompositorLayoutTgc = {
+  /* outputMode */ 12,
+  /* screenshotRequested */ 88,
+  /* frameCounter */ 316,
+  /* systemIO */ 480,
+};
+
+// VulkanRenderer's texture bookkeeping, as read by FrameGrabber.
+struct RendererLayout {
+  usize textureRecords;
+  usize textureRecordStride;
+  usize textureRecordWidth;
+  usize textureRecordHeight;
+  usize textureRecordVkFormat;
+  usize textureRecordFormat;
+};
+
+inline constexpr RendererLayout kRendererLayoutNetease = {
+  /* textureRecords */ 4136,
+  /* textureRecordStride */ 184,
+  /* textureRecordWidth */ 100,
+  /* textureRecordHeight */ 104,
+  /* textureRecordVkFormat */ 96,
+  /* textureRecordFormat */ 176,
+};
+
+inline constexpr RendererLayout kRendererLayoutTgc = {
+  /* textureRecords */ 4120,
+  /* textureRecordStride */ 184,
+  /* textureRecordWidth */ 100,
+  /* textureRecordHeight */ 104,
+  /* textureRecordVkFormat */ 96,
+  /* textureRecordFormat */ 176,
+};
 
 #endif

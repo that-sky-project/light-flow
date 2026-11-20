@@ -1,0 +1,106 @@
+{
+  "netease": {
+    "x64": {
+      "Compositor::Render$0": {
+        "sig": [
+          {
+            "pattern": "E8 ? ? ? ? 48 8B 8E ? ? ? ? E8 ? ? ? ? 48 8B 8E ? ? ? ? 48 85 C9 74",
+            "match": "$@ + $0x00:0 + 0x05"
+          }
+        ]
+      },
+      "GetRenderer$0": {
+        "sig": [
+          {
+            "pattern": "E8 ? ? ? ? 49 63 8D",
+            "match": "$@ + $0x00:0 + 0x05"
+          }
+        ]
+      },
+      "FindRenderTarget$0": {
+        "sig": [
+          {
+            "pattern": "E8 ? ? ? ? 66 90 49 89 C0",
+            "match": "$@ + $0x00:0 + 0x05"
+          }
+        ]
+      },
+      "Texture::GetReadableTexture$0": {
+        "sig": [
+          {
+            "pattern": "E8 ? ? ? ? 45 8B 44 BD",
+            "match": "$@ + $0x00:0 + 0x05"
+          }
+        ]
+      },
+      "SystemIO::IsCapturingMovie$0": {
+        "sig": [
+          {
+            "pattern": "FF 90 ? ? ? ? 88 86 ? ? ? ? C6 86 ? ? ? ? 00",
+            "match": "$0x0:0 / 8"
+          }
+        ],
+        "slot": 85
+      },
+      "Renderer::GetPixels$0": {
+        "slot": 90
+      },
+      "SystemIO::IsCapturingMovieCC$0": {
+        "sig": {
+          "pattern": "FF 90 ? ? ? ? 89 C1 88 86",
+          "match": "$0:0 / 8"
+        },
+        "slot": 90
+      }
+    }
+  },
+  "tgc": {
+    "x64": {
+      "Compositor::Render$0": {
+        "sig": [
+          {
+            "pattern": "55 41 57 41 56 41 55 41 54 56 57 53 B8 88 14 00 00 E8 ?? ?? ?? ?? 48 29 C4 48 8D AC 24 80 00 00 00 C5 F8 29 BD",
+            "match": "$@"
+          }
+        ],
+        "rva": "0x122CA00"
+      },
+      "GetRenderer$0": {
+        "sig": [
+          {
+            "pattern": "55 48 81 EC B0 01 00 00 48 8D AC 24 80 00 00 00 48 83 E4 E0 48 8B 05 ? ? ? ? 48 85 C0 74 09 48 8D A5 30 01 00 00 5D C3",
+            "match": "$@"
+          }
+        ],
+        "rva": "0xA65B0"
+      },
+      "FindRenderTarget$0": {
+        "sig": [
+          {
+            "pattern": "55 41 57 41 56 41 54 56 57 53 48 81 EC E0 00 00 00 48 8D AC 24 80 00 00 00 48 83 E4 E0 4C 89 C6 44 8B B9 ? ? ? ?",
+            "match": "$@"
+          }
+        ],
+        "rva": "0x1223910"
+      },
+      "Texture::GetReadableTexture$0": {
+        "sig": [
+          {
+            "pattern": "55 48 89 E5 44 0F B6 41 2D 44 89 C0 C1 E8 02 83 E0 03 01 D0 41 83 E0 03 31 D2 41 F7 F0 8B 44 91 18 5D C3",
+            "match": "$@"
+          }
+        ],
+        "rva": "0xF8990"
+      },
+      "SystemIO::IsCapturingMovie$0": {
+        "slot": 53
+      },
+      "Renderer::GetPixels$0": {
+        "slot": 87
+      },
+      "SystemIO::IsCapturingMovieCC$0": {
+        "slot": 90
+      }
+    }
+  }
+}
