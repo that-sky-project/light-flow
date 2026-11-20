@@ -2,7 +2,7 @@
 #include <rapidjson/document.h>
 #include "utils/assert.hpp"
 #include "utils/logger.hpp"
-#include "metabinary/platform/lowLevel.hpp"
+#include "platform/lowlevel.hpp"
 #include "metabinary/binaryDescriptor.hpp"
 
 // Windows.h (pulled in by htmodloader.h) defines GetObject, which collides
@@ -327,7 +327,8 @@ static void s_ReadDescFromJson(
 }
 
 void BinaryDescriptorBarn::Initialize(
-  cstring json
+  cstring json,
+  cstring profile
 ) {
   if (g_binaryDescriptorBarn)
     return;
@@ -340,12 +341,24 @@ void BinaryDescriptorBarn::Initialize(
   if (root.HasParseError() || !root.IsObject())
     return;
 
+  // Pick the descriptor list for this game edition. Profiles are ordinary
+  // top-level objects, which keeps the file readable:
+  //
+  //   { "netease": { "x64": { ... } }, "tgc": { "x64": { ... } } }
+  //
+  // A file without a matching profile keeps the legacy root[arch] layout.
+  const rapidjson::Value *section = &root;
+  if (profile && *profile && root.HasMember(profile) &&
+      root[profile].IsObject()) {
+    section = &root[profile];
+  }
+
   cstring tag = ArchX64::GetTag();
-  if (!root.HasMember(tag) || !root[tag].IsObject())
+  if (!section->HasMember(tag) || !(*section)[tag].IsObject())
     return;
 
-  for (auto &it: root[tag].GetObject()) {
-    rapidjson::Value &value = it.value;
+  for (auto &it: (*section)[tag].GetObject()) {
+    const rapidjson::Value &value = it.value;
     if (!value.IsObject())
       continue;
 

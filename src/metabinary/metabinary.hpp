@@ -7,7 +7,7 @@
 #include "utils/types.hpp"
 #include "utils/abiMisc.hpp"
 #include "utils/assert.hpp"
-#include "metabinary/platform/lowLevel.hpp"
+#include "platform/lowlevel.hpp"
 #include "metabinary/binaryDescriptor.hpp"
 
 // ----------------------------------------------------------------------------
@@ -442,7 +442,7 @@ public:
   MetaBinarySystem() = default;
   ~MetaBinarySystem() = default;
 
-  inline bool IsValid() const { return m_hasError; }
+  inline bool IsValid() const { return !m_hasError; }
 
   void Initialize(BinaryDescriptorBarn *binaryDescriptorBarn);
   void Terminate();

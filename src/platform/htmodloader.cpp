@@ -45,6 +45,95 @@ void SetCurrentModuleHandle(HMODULE hModule) {
   g_hModule = hModule;
 }
 
+bool LoadSetting(cstring key, TgcString *result) {
+  if (result == nullptr)
+    return false;
+
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+
+  UINT32 cch = 0;
+  HTStatus status = HTOptionGetCustom(hModule, key, HTOptionType_String, nullptr, &cch);
+  if (status != HT_SUCCESS || cch == 0)
+    return false;
+
+  TgcString buffer(static_cast<size_t>(cch), '\0');
+
+  UINT32 written = cch;
+  status = HTOptionGetCustom(hModule, key, HTOptionType_String, buffer.data(), &written);
+  if (status != HT_SUCCESS)
+    return false;
+
+  *result = buffer;
+  return true;
+}
+
+bool LoadSetting(cstring key, bool *result) {
+  if (result == nullptr)
+    return false;
+
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+
+  bool buffer;
+  HTStatus status = HTOptionGetCustom(hModule, key, HTOptionType_Bool, &buffer, nullptr);
+  if (status != HT_SUCCESS)
+    return false;
+
+  *result = buffer;
+  return true;
+}
+
+bool LoadSetting(cstring key, f64 *result) {
+  if (result == nullptr)
+    return false;
+
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+
+  f64 buffer;
+  HTStatus status = HTOptionGetCustom(hModule, key, HTOptionType_Double, &buffer, nullptr);
+  if (status != HT_SUCCESS)
+    return false;
+
+  *result = buffer;
+  return true;
+}
+
+bool LoadSetting(cstring key, i32 *result) {
+  f64 buffer;
+  if (!LoadSetting(key, &buffer))
+    return false;
+  *result = (i32)buffer;
+  return true;
+}
+
+bool SaveSetting(cstring key, const TgcString &value) {
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+  return HTOptionSetCustom(hModule, key, HTOptionType_String, value.c_str()) == HT_SUCCESS
+    ? true
+    : false;
+}
+
+bool SaveSetting(cstring key, bool value) {
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+  return HTOptionSetCustom(hModule, key, HTOptionType_Bool, &value) == HT_SUCCESS
+    ? true
+    : false;
+}
+
+bool SaveSetting(cstring key, f64 value) {
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+  return HTOptionSetCustom(hModule, key, HTOptionType_Double, &value) == HT_SUCCESS
+    ? true
+    : false;
+}
+
+bool SaveSetting(cstring key, i32 value) {
+  f64 buffer = value;
+  HMODULE hModule = HTModLoader::GetCurrentModuleHandle();
+  return HTOptionSetCustom(hModule, key, HTOptionType_Double, &buffer) == HT_SUCCESS
+    ? true
+    : false;
+}
+
 uintptr_t ScanPattern(
   uintptr_t module,
   const u08 *pattern,

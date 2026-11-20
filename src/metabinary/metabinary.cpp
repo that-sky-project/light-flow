@@ -99,6 +99,8 @@ void MetaBinarySystem::m_AssignDescriptors(
   for (auto &it: m_functions) {
     auto *mbf = it.second;
     const auto *desc = binaryDescriptorBarn->GetDescriptorByName(mbf->GetName());
+    if (!desc || !desc->IsValid())
+      continue;
     mbf->Initialize(desc->GetResult());
     count++;
   }
@@ -109,6 +111,8 @@ void MetaBinarySystem::m_AssignDescriptors(
   for (auto &it: m_virtualFunctions) {
     auto *mbvf = it.second;
     const auto *desc = binaryDescriptorBarn->GetDescriptorByName(mbvf->GetName());
+    if (!desc || !desc->IsValid())
+      continue;
     mbvf->Initialize((i32)desc->GetResult());
     count++;
   }

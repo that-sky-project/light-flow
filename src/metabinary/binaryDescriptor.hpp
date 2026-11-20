@@ -77,7 +77,11 @@ public:
   BinaryDescriptorBarn() = default;
   ~BinaryDescriptorBarn() = default;
 
-  void Initialize(cstring json);
+  // `profile` selects a top-level object of the JSON document, e.g. "tgc" or
+  // "netease". Each profile owns an "x64" descriptor list. When the profile is
+  // null, missing or has no matching arch list, the root object is used so a
+  // single-profile descriptor file keeps working.
+  void Initialize(cstring json, cstring profile = nullptr);
   void Terminate();
 
   const BinaryDescriptor *GetDescriptorByName(cstring name);
