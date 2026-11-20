@@ -35,21 +35,12 @@ void *FrameGrabber::GetSystemIO(
 }
 
 bool FrameGrabber::ResolveTarget(RenderTarget **outTarget) {
-  if (!m_compositor) {
-    Fail("compositor is not available yet");
-    return false;
-  }
-  if (!m_compositorLayout) {
-    Fail("compositor layout is not configured");
+  if (!m_barn || !m_targets) {
+    Fail("the render target table has not been captured yet");
     return false;
   }
 
-  void *barn = ByteOffset(m_compositor, m_compositorLayout->renderTargetBarn);
-  RenderTarget *targets = reinterpret_cast<RenderTarget *>(
-    ByteOffset(m_compositor, m_compositorLayout->renderTargetArray));
-
-  RenderTarget *target = FindRenderTarget(
-    reinterpret_cast<RenderOutline *>(barn), targets, "rtScreenshot");
+  RenderTarget *target = FindRenderTarget(m_barn, m_targets, "rtScreenshot");
   if (!target) {
     Fail("rtScreenshot is not registered (unsupported graphics feature?)");
     return false;

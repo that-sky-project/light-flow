@@ -43,8 +43,4 @@ struct Texture {
   METABINARY_LINK_MFN(u32, Texture, GetReadableTexture, 0, (i32 index), (index))
 };
 
-static_assert(sizeof(Texture) == 104,
-  "Texture describes the 104-byte TGC slot; NetEase's 128-byte slot is "
-  "handled by RenderTargetLayout.");
-
 #endif

@@ -6,6 +6,7 @@
 #include <imgui.h>
 
 #include "utils/types.hpp"
+#include "utils/assert.hpp"
 #include "utils/logger.hpp"
 #include "utils/fsUtils.hpp"
 #include "utils/utf8Utils.hpp"
@@ -14,6 +15,7 @@
 #include "metabinary/metabinary.hpp"
 #include "record/lightflow.hpp"
 #include "skylink/skyCompositor.hpp"
+#include "skylink/skyRenderer.hpp"
 
 // ----------------------------------------------------------------------------
 // [SECTION] Globals
@@ -158,6 +160,23 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
     g_lightFlowInstance->Shutdown();
     return HT_FAIL;
   }
+
+  // Learn the compositor's render target table before anything needs it. A
+  // failure here means rtScreenshot can never be located, so disable the mod.
+  auto &findRenderTarget = METABINARY_FN(, FindRenderTarget, 0);
+  if (!findRenderTarget.Function().IsValid()) {
+    ReportFatal("FindRenderTarget is not linked, the mod has been shut down.");
+    g_lightFlowInstance->Shutdown();
+    return HT_FAIL;
+  }
+  if (!findRenderTarget.Hook()) {
+    ReportFatal("Cannot hook FindRenderTarget, the mod has been shut down.");
+    g_lightFlowInstance->Shutdown();
+    return HT_FAIL;
+  }
+  LOG(
+    "Hooked FindRenderTarget at %p",
+    reinterpret_cast<void *>(findRenderTarget.Function().Address()));
 
   auto &render = METABINARY_FN(Compositor, Render, 0);
   if (!render.Function().IsValid()) {

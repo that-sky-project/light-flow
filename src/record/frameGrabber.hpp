@@ -9,25 +9,30 @@
 #include "skylink/skyRenderer.hpp"
 #include "record/sourcePixelFormat.hpp"
 
-// Reads the rtScreenshot render target out of a live Compositor. The
-// Compositor/Renderer member offsets depend on the game edition, so the caller
-// supplies the layout that matches the running build.
+// Reads the rtScreenshot render target. The render target table is learned by
+// hooking FindRenderTarget(), so no Compositor field offsets are needed; only
+// the renderer's texture bookkeeping depends on the game edition.
 class FrameGrabber {
 public:
   FrameGrabber() = default;
 
   void SetLayout(
-    const CompositorLayout *compositorLayout,
     const RendererLayout *rendererLayout,
     const RenderTargetLayout *renderTargetLayout
   ) {
-    m_compositorLayout = compositorLayout;
     m_rendererLayout = rendererLayout;
     m_renderTargetLayout = renderTargetLayout;
   }
 
-  void SetCompositor(void *compositor) { m_compositor = compositor; }
-  void *Compositor() const { return m_compositor; }
+  // Supplied by the FindRenderTarget() detour whenever it successfully looks up
+  // "rtScreenshot".
+  void SetRenderTargets(
+    const RenderOutline *barn,
+    RenderTarget *targets
+  ) {
+    m_barn = barn;
+    m_targets = targets;
+  }
 
   // Resolve the SystemIO object owned by the compositor.
   static void *GetSystemIO(
@@ -54,8 +59,8 @@ private:
   bool ResolveTarget(RenderTarget **outTarget);
   void Fail(cstring fmt, ...);
 
-  void *m_compositor = nullptr;
-  const CompositorLayout *m_compositorLayout = nullptr;
+  const RenderOutline *m_barn = nullptr;
+  RenderTarget *m_targets = nullptr;
   const RendererLayout *m_rendererLayout = nullptr;
   const RenderTargetLayout *m_renderTargetLayout = nullptr;
   std::string m_lastError;

@@ -74,8 +74,7 @@ bool LightFlowMod::Initialize(HMODULE module, GameProfile profile) {
   m_compositorLayout = &GetCompositorLayout(profile);
   m_rendererLayout = &GetRendererLayout(profile);
   m_renderTargetLayout = &GetRenderTargetLayout(profile);
-  m_grabber.SetLayout(
-    m_compositorLayout, m_rendererLayout, m_renderTargetLayout);
+  m_grabber.SetLayout(m_rendererLayout, m_renderTargetLayout);
 
   m_modFolder = Win64SysCall::GetModuleFolder(module);
   m_capturesFolder = PathUtils::Join({m_modFolder, L"captures"});
@@ -416,10 +415,16 @@ void LightFlowMod::OnCompositorPreRender(Compositor *compositor) {
   m_screenshotPendingThisFrame =
     *(base + m_compositorLayout->screenshotRequested) != 0;
 
-  m_grabber.SetCompositor(compositor);
 
   if (m_forceMovie && !m_movieHookInstalled)
     EnsureMovieHook(compositor);
+}
+
+void LightFlowMod::OnRenderTargetsFound(
+  const RenderOutline *barn,
+  RenderTarget *targets
+) {
+  m_grabber.SetRenderTargets(barn, targets);
 }
 
 void LightFlowMod::OnCompositorRender(

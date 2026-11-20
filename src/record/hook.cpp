@@ -1,5 +1,6 @@
 #include "record/lightflow.hpp"
 #include "skylink/skyCompositor.hpp"
+#include "skylink/skyRenderer.hpp"
 #include "skylink/skySystemIO.hpp"
 
 // ----------------------------------------------------------------------------
@@ -63,3 +64,22 @@ METABINARY_HOOK_MFN(
   SystemIO, IsCapturingMovieCC, 0,
   &HOOK_SystemIO::IsCapturingMovieCC
 )
+
+// FindRenderTarget() is called by the compositor with the render target table
+// itself. Capture that table on its first execution (and refresh it on later
+// calls, in case the table is rebuilt after a resize), so FrameGrabber does
+// not have to know where the compositor keeps it.
+METABINARY_HOOK_FN(
+  RenderTarget *, FindRenderTarget, 0,
+  (const RenderOutline *barn, RenderTarget *targets, cstring name)
+) {
+  RenderTarget *result = FindRenderTarget(barn, targets, name);
+
+  if (barn && targets) {
+    LightFlowMod *mod = GetLightFlowMod();
+    if (mod)
+      mod->OnRenderTargetsFound(barn, targets);
+  }
+
+  return result;
+}

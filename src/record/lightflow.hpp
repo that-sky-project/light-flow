@@ -74,6 +74,9 @@ public:
   void OnCompositorPreRender(Compositor *compositor);
   void OnCompositorRender(Compositor *compositor, bool movieMode);
 
+  // Called by the FindRenderTarget() hook once it has resolved "rtScreenshot".
+  void OnRenderTargetsFound(const RenderOutline *barn, RenderTarget *targets);
+
   // Called from HTModRenderGui().
   void BuildScene();
 
