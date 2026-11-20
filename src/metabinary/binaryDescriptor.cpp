@@ -86,68 +86,58 @@ static bool s_CountSignature(cstring sig, bool allowWildcard, u64 *count) {
 //
 // Both sequences are `*outLength` bytes long, the length ScanPattern() takes.
 // The caller owns the two arrays and releases them with delete[].
-static void s_BuildPattern(
-  const u08 **outPattern,
-  const u08 **outMask,
-  u32 *outLength,
+// Builds the byte/mask sequence handed to ScanPattern() from one signature
+// entry.
+//
+//   - Byte wildcard mode (mask == nullptr): "48 8D ? E8 ? ? ?". Each hex pair
+//     becomes a 0xFF mask byte; each '?' (one or two, bytes separated by any
+//     number of spaces) becomes a 0x00 mask byte over a 0x00 pattern byte.
+//   - Bit-mask mode (mask != nullptr): both strings spell hex bytes; each mask
+//     byte is the bitwise keep-mask for the matching pattern byte. '?' is not
+//     allowed here.
+//
+// Returns false on a malformed signature, leaving both vectors empty.
+static bool s_BuildPattern(
+  std::vector<u08> *outPattern,
+  std::vector<u08> *outMask,
   cstring pattern,
   cstring mask
 ) {
-  // A descriptor with no signature has nothing to build.
-  if (!pattern) {
-    *outPattern = nullptr;
-    *outMask = nullptr;
-    *outLength = 0;
-    return;
-  }
+  outPattern->clear();
+  outMask->clear();
+
+  if (!pattern)
+    return false;
 
   const bool isByteWildcard = (mask == nullptr);
 
   u64 patternLen = 0;
   if (!s_CountSignature(pattern, isByteWildcard, &patternLen)) {
     LOGW("Invalid pattern [%s]", pattern);
-    *outPattern = nullptr;
-    *outMask = nullptr;
-    *outLength = 0;
-    return;
+    return false;
   }
 
-  if (patternLen == 0) {
-    *outPattern = nullptr;
-    *outMask = nullptr;
-    *outLength = 0;
-    return;
+  if (patternLen == 0 || patternLen > 0xFFFFFFFFull) {
+    LOGW("Signature is empty or too long [%s]", pattern);
+    return false;
   }
 
-  // ScanPattern() takes the length as a u32.
-  if (patternLen > 0xFFFFFFFFull) {
-    LOGW("Signature is too long [%s]", pattern);
-    *outPattern = nullptr;
-    *outMask = nullptr;
-    *outLength = 0;
-    return;
-  }
-
-  u64 maskLen = 0;
   if (!isByteWildcard) {
+    u64 maskLen = 0;
     if (!s_CountSignature(mask, false, &maskLen) || maskLen != patternLen) {
       LOGW("Signature pattern/mask length mismatch [%s] [%s]", pattern, mask);
-      *outPattern = nullptr;
-      *outMask = nullptr;
-      *outLength = 0;
-      return;
+      return false;
     }
-  } else {
-    maskLen = patternLen;
   }
 
-  u08 *bytes = new u08[patternLen];
-  u08 *masks = new u08[patternLen];
+  outPattern->resize(patternLen);
+  outMask->resize(patternLen);
 
+  u08 *bytes = outPattern->data();
+  u08 *masks = outMask->data();
   const char *p = pattern;
   const char *m = mask;
   u64 i = 0;
-  bool valid = true;
   while (*p) {
     while (*p == ' ' || *p == '\t')
       p++;
@@ -171,8 +161,10 @@ static void s_BuildPattern(
           m++;
         u08 mk;
         if (!s_ReadHexByte(&m, &mk)) {
-          valid = false;
-          break;
+          LOGW("Invalid mask [%s] for pattern [%s]", mask, pattern);
+          outPattern->clear();
+          outMask->clear();
+          return false;
         }
         masks[i] = mk;
       }
@@ -180,19 +172,7 @@ static void s_BuildPattern(
     i++;
   }
 
-  if (!valid) {
-    LOGW("Invalid mask [%s] for pattern [%s]", mask, pattern);
-    delete[] bytes;
-    delete[] masks;
-    *outPattern = nullptr;
-    *outMask = nullptr;
-    *outLength = 0;
-    return;
-  }
-
-  *outPattern = bytes;
-  *outMask = masks;
-  *outLength = (u32)patternLen;
+  return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -218,14 +198,26 @@ void BinaryDescriptor::Initialize(
   m_rva = init.rva;
   m_slot = init.slot;
 
-  // Compile the signature into the byte/mask sequences ScanPattern() takes.
-  // Leaves all three empty when the descriptor carries no signature.
-  s_BuildPattern(&m_pattern, &m_mask, &m_patternLen, init.pattern, init.mask);
+  // Compile every candidate in order. An entry that cannot be built or whose
+  // expression does not compile is dropped; the remaining ones keep their
+  // relative order, so the first usable signature in the file stays first.
+  for (const auto &entryInit: init.signatures) {
+    Signature sig;
+    if (!s_BuildPattern(&sig.pattern, &sig.mask, entryInit.pattern, entryInit.mask))
+      continue;
 
-  // Use the address of the signature by default.
-  m_match.Initialize(init.match ? init.match : "$@");
-  if (!m_match.IsValid())
-    LOGW("Invalid pattern expression [%s] in [%s]", init.match, m_name.c_str());
+    sig.match.Initialize(entryInit.match ? entryInit.match : "$@");
+    if (!sig.match.IsValid()) {
+      LOGW(
+        "Invalid pattern expression [%s] in [%s]",
+        entryInit.match,
+        m_name.c_str());
+      continue;
+    }
+
+    sig.valid = true;
+    m_signatures.push_back(std::move(sig));
+  }
 
   m_initialized = true;
 }
@@ -234,13 +226,7 @@ void BinaryDescriptor::Terminate() {
   if (!m_initialized)
     return;
 
-  m_match.Terminate();
-
-  delete[] m_pattern;
-  delete[] m_mask;
-  m_pattern = nullptr;
-  m_mask = nullptr;
-  m_patternLen = 0;
+  m_signatures.clear();
 
   m_name.clear();
   m_module = 0;
@@ -256,46 +242,65 @@ void BinaryDescriptor::Evaluate() {
   if (!m_initialized || m_evaluated)
     return;
 
-  // Virtual function descriptor: report the vtable slot directly.
+  // The signatures go first: they survive the code moving, which is the whole
+  // point of scanning for one. Top to bottom, the first entry that both scans
+  // and evaluates wins.
+  for (const Signature &sig: m_signatures) {
+    if (!sig.valid || sig.pattern.empty())
+      continue;
+
+    uintptr_t addr = HTModLoader::ScanPattern(
+      m_module,
+      sig.pattern.data(),
+      sig.mask.data(),
+      static_cast<u32>(sig.pattern.size()));
+    if (!addr)
+      continue;
+
+    // Solve() hands `inst` straight to the decoder, which reads a whole
+    // encoding at a time and so can run up to GetMaxInsnLength() bytes past the
+    // last instruction a "$a:b" term references. Pad the buffer by that much
+    // and leave the tail zeroed: the padding keeps the decode in bounds while
+    // the count stays at the pattern length, so an instruction straddling the
+    // end of the sequence is still rejected rather than assembled out of bytes
+    // nobody matched.
+    //
+    // Only the matched bytes are read. Reading the padding too would fail the
+    // whole descriptor whenever the sequence sits at the end of a section.
+    std::vector<u08> inst(sig.pattern.size() + ArchX64::GetMaxInsnLength());
+    if (!Win64SysCall::ReadMemory(
+          addr, inst.data(), static_cast<size_t>(sig.pattern.size()))) {
+      continue;
+    }
+
+    i64 result = 0;
+    if (!sig.match.Solve(
+          inst.data(),
+          addr,
+          static_cast<u32>(sig.pattern.size()),
+          &result)) {
+      continue;
+    }
+
+    m_result = result;
+    m_evaluated = true;
+    return;
+  }
+
+  // Virtual function descriptor: no signature produced a slot, so fall back to
+  // the declared one.
   if (m_slot >= 0) {
     m_result = m_slot;
     m_evaluated = true;
     return;
   }
 
-  uintptr_t addr = 0;
-
-  // The signature goes first: it survives the code moving, which is the whole
-  // point of scanning for one. Skipped when the descriptor carries none.
-  if (m_patternLen)
-    addr = HTModLoader::ScanPattern(m_module, m_pattern, m_mask, m_patternLen);
-
-  // Fall back to the RVA when the scan came up empty, and use it outright for a
-  // descriptor with no signature at all. GetDlModule() hands back the module
-  // base, so the address is base + RVA.
-  if (!addr && m_module && m_rva != kInvalidRva)
-    addr = m_module + m_rva;
-
-  if (!addr)
-    return;
-
-  // Solve() hands `inst` straight to the decoder, which reads a whole encoding
-  // at a time and so can run up to GetMaxInsnLength() bytes past the last
-  // instruction a "$a:b" term references. Pad the buffer by that much and leave
-  // the tail zeroed: the padding keeps the decode in bounds while the count
-  // stays at m_patternLen, so an instruction straddling the end of the sequence
-  // is still rejected rather than assembled out of bytes nobody matched.
-  //
-  // Only the matched bytes are read. Reading the padding too would fail the
-  // whole descriptor whenever the sequence sits at the end of a section.
-  std::vector<u08> inst(m_patternLen + ArchX64::GetMaxInsnLength());
-  if (m_patternLen && !Win64SysCall::ReadMemory(addr, inst.data(), m_patternLen))
-    return;
-
-  if (!m_match.Solve(inst.data(), addr, m_patternLen, &m_result))
-    return;
-
-  m_evaluated = true;
+  // Ordinary function descriptor: fall back to the module-relative address.
+  // GetDlModule() hands back the module base, so the address is base + RVA.
+  if (m_module && m_rva != kInvalidRva)
+    m_result = static_cast<i64>(m_module + m_rva);
+  if (m_result)
+    m_evaluated = true;
 }
 
 // ----------------------------------------------------------------------------
@@ -330,6 +335,26 @@ static bool s_ReadNumberLike(
   return false;
 }
 
+static void s_ReadSignatureFromJson(
+  BinaryDescriptor::InitTypedef *init,
+  const rapidjson::Value &sig
+) {
+  BinaryDescriptor::SignatureInit entry;
+
+  if (sig.HasMember("pattern") && sig["pattern"].IsString())
+    entry.pattern = sig["pattern"].GetString();
+
+  if (sig.HasMember("mask") && sig["mask"].IsString())
+    entry.mask = sig["mask"].GetString();
+
+  if (sig.HasMember("match") && sig["match"].IsString())
+    entry.match = sig["match"].GetString();
+
+  // A signature without a pattern has nothing to scan for.
+  if (entry.pattern)
+    init->signatures.push_back(entry);
+}
+
 static void s_ReadDescFromJson(
   BinaryDescriptor::InitTypedef *init,
   const rapidjson::Value &json
@@ -343,17 +368,19 @@ static void s_ReadDescFromJson(
   if (json.HasMember("module") && json["module"].IsString())
     init->module = json["module"].GetString();
 
-  if (json.HasMember("sig") && json["sig"].IsObject()) {
+  if (json.HasMember("sig")) {
     const rapidjson::Value &sig = json["sig"];
 
-    if (sig.HasMember("pattern") && sig["pattern"].IsString())
-      init->pattern = sig["pattern"].GetString();
-
-    if (sig.HasMember("mask") && sig["mask"].IsString())
-      init->mask = sig["mask"].GetString();
-
-    if (sig.HasMember("match") && sig["match"].IsString())
-      init->match = sig["match"].GetString();
+    if (sig.IsObject()) {
+      // Legacy single-signature form.
+      s_ReadSignatureFromJson(init, sig);
+    } else if (sig.IsArray()) {
+      // Ordered candidate list: the first entry that scans and evaluates wins.
+      for (const rapidjson::Value &entry: sig.GetArray()) {
+        if (entry.IsObject())
+          s_ReadSignatureFromJson(init, entry);
+      }
+    }
   }
 }
 
