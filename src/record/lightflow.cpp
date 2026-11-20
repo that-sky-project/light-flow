@@ -421,10 +421,11 @@ void LightFlowMod::OnCompositorPreRender(Compositor *compositor) {
 }
 
 void LightFlowMod::OnRenderTargetsFound(
-  const RenderOutline *barn,
-  RenderTarget *targets
+  const RenderOutline *renderOutline,
+  const RenderTarget *targets
 ) {
-  m_grabber.SetRenderTargets(barn, targets);
+  // FrameGrabber ensures that RenderOutline is set only once.
+  m_grabber.SetRenderTargets(renderOutline, targets);
 }
 
 void LightFlowMod::OnCompositorRender(

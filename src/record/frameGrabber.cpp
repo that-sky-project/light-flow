@@ -35,12 +35,12 @@ void *FrameGrabber::GetSystemIO(
 }
 
 bool FrameGrabber::ResolveTarget(RenderTarget **outTarget) {
-  if (!m_barn || !m_targets) {
+  if (!m_renderOutline || !m_targets) {
     Fail("the render target table has not been captured yet");
     return false;
   }
 
-  RenderTarget *target = FindRenderTarget(m_barn, m_targets, "rtScreenshot");
+  RenderTarget *target = FindRenderTarget(*m_renderOutline, m_targets, "rtScreenshot");
   if (!target) {
     Fail("rtScreenshot is not registered (unsupported graphics feature?)");
     return false;

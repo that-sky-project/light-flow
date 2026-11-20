@@ -16,7 +16,7 @@ class FrameGrabber {
 public:
   FrameGrabber() = default;
 
-  void SetLayout(
+  inline void SetLayout(
     const RendererLayout *rendererLayout,
     const RenderTargetLayout *renderTargetLayout
   ) {
@@ -26,12 +26,28 @@ public:
 
   // Supplied by the FindRenderTarget() detour whenever it successfully looks up
   // "rtScreenshot".
-  void SetRenderTargets(
-    const RenderOutline *barn,
-    RenderTarget *targets
+  inline void SetRenderTargets(
+    const RenderOutline *renderOutline,
+    const RenderTarget *targets
   ) {
-    m_barn = barn;
+    // WARN: The game calls FindRenderTarget in the main render loop and on window
+    // resize. When the window is resized, the game first constructs RenderOutline
+    // on the stack, then passes it to FindRenderTarget and other functions for
+    // initialization, and finally assigns it to Compositor::m_renderOutline via
+    // operator=. The game also executes the window resize logic once during its
+    // first initialization. Therefore, caching the pointer only once is wrong and
+    // very likely to cache a stack object, causing a crash.
+    //
+    // So we cache on every call, so that it gets corrected when the correct object
+    // address arrives.
+    m_renderOutline = renderOutline;
     m_targets = targets;
+
+    // if (!m_isRenderTargetSet) {
+    //   m_targets = targets;
+    //   m_isRenderTargetSet = true;
+    // }
+    // LOG("Cached RenderTarget(s): 0x%p", m_targets);
   }
 
   // Resolve the SystemIO object owned by the compositor.
@@ -59,8 +75,10 @@ private:
   bool ResolveTarget(RenderTarget **outTarget);
   void Fail(cstring fmt, ...);
 
-  const RenderOutline *m_barn = nullptr;
-  RenderTarget *m_targets = nullptr;
+  bool m_isRenderOutlineSet = false;
+  bool m_isRenderTargetSet = false;
+  const RenderOutline *m_renderOutline = nullptr;
+  const RenderTarget *m_targets = nullptr;
   const RendererLayout *m_rendererLayout = nullptr;
   const RenderTargetLayout *m_renderTargetLayout = nullptr;
   std::string m_lastError;

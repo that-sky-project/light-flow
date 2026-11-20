@@ -71,15 +71,11 @@ METABINARY_HOOK_MFN(
 // not have to know where the compositor keeps it.
 METABINARY_HOOK_FN(
   RenderTarget *, FindRenderTarget, 0,
-  (const RenderOutline *barn, RenderTarget *targets, cstring name)
+  (const RenderOutline &renderOutline, const RenderTarget *renderTargets, cstring name)
 ) {
-  RenderTarget *result = FindRenderTarget(barn, targets, name);
+  LightFlowMod *mod = GetLightFlowMod();
+  if (mod)
+    mod->OnRenderTargetsFound(&renderOutline, renderTargets);
 
-  if (barn && targets) {
-    LightFlowMod *mod = GetLightFlowMod();
-    if (mod)
-      mod->OnRenderTargetsFound(barn, targets);
-  }
-
-  return result;
+  return FindRenderTarget(renderOutline, renderTargets, name);
 }

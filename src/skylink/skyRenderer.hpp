@@ -51,8 +51,8 @@ public:
 METABINARY_LINK_FN(Renderer *, GetRenderer, 0, (), ())
 
 METABINARY_LINK_FN(RenderTarget *, FindRenderTarget, 0,
-  (const RenderOutline *barn, RenderTarget *targets, cstring name),
-  (barn, targets, name)
+  (const RenderOutline &renderOutline, const RenderTarget *renderTargets, cstring name),
+  (renderOutline, renderTargets, name)
 )
 
 #endif
