@@ -117,6 +117,10 @@ private:
   void SetStatus(const char *format, ...);
   std::string GetStatus();
 
+  // Mark the settings for automatic persistence. The UI calls this after every
+  // change; Update() flushes them once the user stops editing.
+  void MarkSettingsDirty();
+
   void SyncSettingsToUi();
 
   bool m_initialized = false;
@@ -167,6 +171,10 @@ private:
   std::chrono::steady_clock::time_point m_startTime;
   std::chrono::steady_clock::time_point m_lastGrabTime;
   u64 m_lastGrabFailLogMs = 0;
+
+  // Settings are written back once editing has been idle for a moment.
+  bool m_settingsDirty = false;
+  std::chrono::steady_clock::time_point m_settingsDirtyTime;
 
   // Movie hook.
   bool m_movieHookInstalled = false;

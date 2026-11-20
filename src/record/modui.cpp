@@ -99,6 +99,7 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
     ImGui::InputText("##output", m_outputBuffer, sizeof(m_outputBuffer));
     if (ImGui::IsItemEdited()) {
       mod->m_settings.output = m_outputBuffer;
+      mod->MarkSettingsDirty();
     }
     ImGui::SameLine();
     if (ImGui::Button("Browse..."))
@@ -134,29 +135,34 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
 
     if (ImGui::Combo("Codec", &codecIndex, kCodecs, IM_ARRAYSIZE(kCodecs))) {
       mod->m_settings.codec = kCodecs[codecIndex];
+      mod->MarkSettingsDirty();
     }
 
     if (ImGui::InputInt("Bitrate (kbps)", &bitrate)) {
       bitrate = std::max(100, bitrate);
       mod->m_settings.bitrateKbps = bitrate;
+      mod->MarkSettingsDirty();
     }
 
     if (ImGui::InputInt("Capture FPS (0 = every frame)", &fps)) {
       fps = std::min(240, std::max(0, fps));
       mod->m_targetFps = fps;
       mod->m_settings.targetFps = fps;
+      mod->MarkSettingsDirty();
     }
 
     if (ImGui::SliderInt("Encoder queue", &queueSize, 1, 16)) {
       queueSize = std::min(16, std::max(1, queueSize));
       mod->m_queueLimit = queueSize;
       mod->m_settings.queueSize = queueSize;
+      mod->MarkSettingsDirty();
     }
 
     bool forceMovie = mod->m_forceMovie;
     if (ImGui::Checkbox("Force movie capture mode", &forceMovie)) {
       mod->m_forceMovie = forceMovie;
       mod->m_settings.forceMovieMode = forceMovie;
+      mod->MarkSettingsDirty();
     }
 
     ImGui::SameLine();
@@ -165,12 +171,14 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
     if (ImGui::Checkbox("REC overlay", &showOverlay)) {
       mod->m_showOverlay = showOverlay;
       mod->m_settings.showOverlay = showOverlay;
+      mod->MarkSettingsDirty();
     }
 
     bool swapRedBlue = mod->m_swapRedBlue;
     if (ImGui::Checkbox("Swap R&B", &swapRedBlue)) {
       mod->m_swapRedBlue = swapRedBlue;
       mod->m_settings.swapRedBlue = swapRedBlue;
+      mod->MarkSettingsDirty();
     }
 
     ImGui::Spacing();
@@ -184,13 +192,6 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
     ))
       mod->ToggleCapture();
     ImGui::EndDisabled();
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Save settings")) {
-      mod->m_settings.Save();
-      mod->SetStatus("Settings saved.");
-    }
 
     ImGui::Separator();
 
@@ -266,6 +267,7 @@ void LightFlowUi::m_BrowseOutput(LightFlowMod *mod) {
   snprintf(m_outputBuffer, sizeof(m_outputBuffer), "%s", output.c_str());
 
   mod->m_settings.output = output;
+  mod->MarkSettingsDirty();
 }
 
 void LightFlowUi::m_OpenCapturesFolder(LightFlowMod *mod) {

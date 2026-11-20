@@ -136,6 +136,11 @@ void LightFlowMod::Shutdown() {
   SetStatus("Stopped.");
 }
 
+void LightFlowMod::MarkSettingsDirty() {
+  m_settingsDirty = true;
+  m_settingsDirtyTime = std::chrono::steady_clock::now();
+}
+
 void LightFlowMod::SyncSettingsToUi() {
   m_forceMovie = m_settings.forceMovieMode;
   m_showOverlay = m_settings.showOverlay;
@@ -171,6 +176,13 @@ void LightFlowMod::OnDisable() {
 
 void LightFlowMod::Update() {
   ReapWorker();
+
+  if (m_settingsDirty &&
+      std::chrono::steady_clock::now() - m_settingsDirtyTime >=
+        std::chrono::milliseconds(500)) {
+    m_settings.Save();
+    m_settingsDirty = false;
+  }
 
   if (m_coreDisabled) {
     // The mod shut its main feature down after a failed hook. Keep the flag
