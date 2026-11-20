@@ -77,6 +77,11 @@
 
 若模组无法正常运行，用户可以自行根据ida更新二进制描述符中的特征码，同时也可以在本仓库发布issue或PR。
 
+## 其他相关项目
+- [拾影(hSC plugin)](https://github.com/HTMonkeyG/hSC)：摄像机修改与航拍插件。
+- [flame.cc](https://github.com/that-sky-project/flame.cc)：通用型光遇ModAPI。
+- [that-sky-infdev](https://github.com/that-sky-project/that-sky-infdev)：光遇无限世界生成测试mod。
+
 ## 免责声明
 《光·遇》、《Sky光·遇》、《Sky: Children of the Light》的一切合法权益（包括但不限于使用本软件产生的游戏内图片、音视频）归属于网易与/或ThatGameCompany，且适用于其对应用户条约与服务协议。
 
