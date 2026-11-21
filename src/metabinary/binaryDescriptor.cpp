@@ -1,6 +1,7 @@
 ﻿#include <stdlib.h>
 #include <vector>
 #include <rapidjson/document.h>
+#include <rapidjson/reader.h>
 #include "utils/logger.hpp"
 #include "utils/archUtils.hpp"
 #include "utils/loaderUtils.hpp"
@@ -269,16 +270,20 @@ void BinaryDescriptor::Evaluate() {
     // whole descriptor whenever the sequence sits at the end of a section.
     std::vector<u08> inst(sig.pattern.size() + ArchX64::GetMaxInsnLength());
     if (!Win64SysCall::ReadMemory(
-          addr, inst.data(), static_cast<size_t>(sig.pattern.size()))) {
+      addr,
+      inst.data(),
+      static_cast<size_t>(sig.pattern.size())
+    )) {
       continue;
     }
 
     i64 result = 0;
     if (!sig.match.Solve(
-          inst.data(),
-          addr,
-          static_cast<u32>(sig.pattern.size()),
-          &result)) {
+      inst.data(),
+      addr,
+      static_cast<u32>(sig.pattern.size()),
+      &result
+    )) {
       continue;
     }
 
@@ -292,15 +297,18 @@ void BinaryDescriptor::Evaluate() {
   if (m_slot >= 0) {
     m_result = m_slot;
     m_evaluated = true;
+    LOGW("%s failed to evaluate with signature, fallback to \"slot\"", m_name.c_str());
     return;
   }
 
   // Ordinary function descriptor: fall back to the module-relative address.
   // GetDlModule() hands back the module base, so the address is base + RVA.
-  if (m_module && m_rva != kInvalidRva)
+  if (m_module && m_rva != kInvalidRva) {
     m_result = static_cast<i64>(m_module + m_rva);
-  if (m_result)
+    LOGW("%s failed to evaluate with signature, fallback to \"rva\"", m_name.c_str());
     m_evaluated = true;
+    return;
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -394,10 +402,15 @@ void BinaryDescriptorBarn::Initialize(
   g_binaryDescriptorBarn = this;
 
   rapidjson::Document root;
-  root.Parse(json);
+  constexpr auto flags = rapidjson::kParseDefaultFlags
+    | rapidjson::kParseCommentsFlag
+    | rapidjson::kParseTrailingCommasFlag;
+  root.Parse<flags>(json);
 
-  if (root.HasParseError() || !root.IsObject())
+  if (root.HasParseError() || !root.IsObject()) {
+    LOGW("Failed to parse binary descriptor json: %d", root.GetParseError());
     return;
+  }
 
   // Pick the descriptor list for this game edition. Profiles are ordinary
   // top-level objects, which keeps the file readable:
