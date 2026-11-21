@@ -1,5 +1,9 @@
 #include <cstdio>
 
+extern "C" {
+#include <libavutil/log.h>
+}
+
 #include <htmodloader/htmod.h>
 #include <htmodloader/htmodloader.h>
 #include <htmodloader/backends/html_impl_sky.h>
@@ -9,14 +13,11 @@
 #include "utils/assert.hpp"
 #include "utils/logger.hpp"
 #include "utils/fsUtils.hpp"
-#include "utils/utf8Utils.hpp"
 #include "utils/winapicall.hpp"
 #include "metabinary/binaryDescriptor.hpp"
 #include "metabinary/metabinary.hpp"
 #include "record/lightflow.hpp"
 #include "record/hook.hpp"
-#include "skylink/skyCompositor.hpp"
-#include "skylink/skyRenderer.hpp"
 
 // ----------------------------------------------------------------------------
 // [SECTION] Globals
@@ -62,6 +63,13 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
 
   SetAssertHandler([](cstring expr, cstring msg, cstring file, u32 line, u32) {
     LOGW("Assertion failed at %s (%u): %s (%s)", file, line, expr, msg);
+  });
+
+  av_log_set_level(AV_LOG_INFO);
+  av_log_set_callback([](void *, int level, cstring fmt, va_list va) {
+    if (level > AV_LOG_INFO)
+      return;
+    GetLogger()->Logv("[ffmpeg]", fmt, va);
   });
 
   // 1. Ask the loader which edition is running. The same build of this mod

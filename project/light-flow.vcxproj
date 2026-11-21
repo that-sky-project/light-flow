@@ -125,11 +125,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="CopyRuntimeFiles" AfterTargets="Build">
     <ItemGroup>
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avutil-61.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swresample-7.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swscale-10.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avcodec-63.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avformat-63.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avutil-59.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swresample-5.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swscale-8.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avcodec-61.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avformat-61.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(LightFlowRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <MakeDir Directories="$(OutDir)Data\Manifests" />

@@ -80,7 +80,7 @@ void LightFlowUi::m_DrawOverlay(LightFlowMod *mod) {
 
 void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
   static const char *kCodecs[] = {
-    "libx264", "h264_mf", "libopenh264", "mpeg4"
+    "libx264", "h264_mf", "libopenh264", "mpeg4", "h264_nvenc", "hevc_nvenc"
   };
 
   bool open = m_menuOpen;
