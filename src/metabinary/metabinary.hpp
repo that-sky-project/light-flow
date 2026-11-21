@@ -335,6 +335,7 @@ protected:
   { }
 
 public:
+  inline bool IsInitialized() const { return m_vindex != -1; }
   inline void Initialize(i32 vindex) {
     if (m_vindex != -1)
       return;
@@ -401,6 +402,123 @@ public:
   operator PFN_Member() const {
     return reinterpret_cast<PFN_Member>(AbiMemFuncPtr(m_func.Original()).Pointer());
   }
+};
+
+// ----------------------------------------------------------------------------
+// [SECTION] MetaBinaryVariable
+// ----------------------------------------------------------------------------
+
+class MetaBinaryVariable: public MetaBinaryLister<MetaBinaryVariable> {
+private:
+  MetaBinaryVariable(const MetaBinaryVariable &) = delete;
+  MetaBinaryVariable(MetaBinaryVariable &&) = delete;
+  MetaBinaryVariable &operator=(const MetaBinaryVariable &) = delete;
+
+protected:
+  explicit MetaBinaryVariable(
+    cstring name
+  )
+    : MetaBinaryLister<MetaBinaryVariable>(name)
+  { }
+
+public:
+  inline bool IsInitialized() const { return m_address != 0xFFFFFFFFFFFFFFFFull; }
+  inline void Initialize(uintptr_t address) { m_address = address; }
+  inline uintptr_t Address() const { return m_address; }
+
+protected:
+  uintptr_t m_address = 0xFFFFFFFFFFFFFFFFull;
+};
+
+template<typename Type>
+class MetaBinaryVariableGetter {
+private:
+  MetaBinaryVariableGetter(const MetaBinaryVariableGetter &) = delete;
+  MetaBinaryVariableGetter(MetaBinaryVariableGetter &&) = delete;
+  MetaBinaryVariableGetter &operator=(const MetaBinaryVariableGetter &) = delete;
+
+public:
+  explicit MetaBinaryVariableGetter(const MetaBinaryVariable *var): m_var(var) { }
+
+  operator Type &() const {
+    return *reinterpret_cast<Type *>(m_var->Address());
+  }
+
+private:
+  const MetaBinaryVariable *m_var = nullptr;
+};
+
+class MetaBinaryMemberVariable: public MetaBinaryLister<MetaBinaryMemberVariable> {
+private:
+  MetaBinaryMemberVariable(const MetaBinaryMemberVariable &) = delete;
+  MetaBinaryMemberVariable(MetaBinaryMemberVariable &&) = delete;
+  MetaBinaryMemberVariable &operator=(const MetaBinaryMemberVariable &) = delete;
+
+public:
+  explicit MetaBinaryMemberVariable(
+    cstring name
+  )
+    : MetaBinaryLister<MetaBinaryMemberVariable>(name)
+  { }
+
+public:
+  inline bool IsInitialized() const { return m_initialized; }
+  inline void Initialize(i32 offset) { m_offset = offset; m_initialized = true; }
+  inline i32 Address() const { return m_offset; }
+
+protected:
+  bool m_initialized = false;
+  i32 m_offset = 0;
+};
+
+template<typename Type, typename Class>
+class MetaBinaryMemberVariableGetter {
+protected:
+  using P_Member = Type Class::*;
+
+private:
+  MetaBinaryMemberVariableGetter(const MetaBinaryMemberVariableGetter &) = delete;
+  MetaBinaryMemberVariableGetter(MetaBinaryMemberVariableGetter &&) = delete;
+  MetaBinaryMemberVariableGetter &operator=(const MetaBinaryMemberVariableGetter &) = delete;
+
+public:
+  explicit MetaBinaryMemberVariableGetter(const MetaBinaryMemberVariable *var): m_var(var) { }
+
+  operator P_Member() const {
+    return reinterpret_cast<P_Member>(AbiMemDataPtr(m_var->Address()).Pointer());
+  }
+
+private:
+  const MetaBinaryMemberVariable *m_var = nullptr;
+};
+
+// ----------------------------------------------------------------------------
+// [SECTION] MetaBinaryConstant
+// ----------------------------------------------------------------------------
+
+// MetaBinaryConstant directly saves and returns the value obtained by
+// evaluating the descriptor.
+class MetaBinaryConstant: public MetaBinaryLister<MetaBinaryConstant> {
+private:
+  MetaBinaryConstant(const MetaBinaryConstant &) = delete;
+  MetaBinaryConstant(MetaBinaryConstant &&) = delete;
+  MetaBinaryConstant &operator=(const MetaBinaryConstant &) = delete;
+
+public:
+  explicit MetaBinaryConstant(
+    cstring name
+  )
+    : MetaBinaryLister<MetaBinaryConstant>(name)
+  { }
+
+public:
+  inline bool IsInitialized() const { return m_initialized; }
+  inline void Initialize(uintptr_t value) { m_value = value; m_initialized = true; }
+  inline uintptr_t Value() const { return m_value; }
+
+protected:
+  bool m_initialized = false;
+  uintptr_t m_value = 0;
 };
 
 // ----------------------------------------------------------------------------
@@ -481,6 +599,9 @@ private:
 
   std::unordered_map<TgcString, MetaBinaryFunction *> m_functions = {};
   std::unordered_map<TgcString, MetaBinaryVirtualFunction *> m_virtualFunctions = {};
+  std::unordered_map<TgcString, MetaBinaryVariable *> m_variables = {};
+  std::unordered_map<TgcString, MetaBinaryMemberVariable *> m_memberVariables = {};
+  std::unordered_map<TgcString, MetaBinaryConstant *> m_constants = {};
 
   bool m_hasError = false;
 };
@@ -553,7 +674,7 @@ private:
 // Example:
 // ```
 // namespace Hook {
-// METABINARY_LINK_FN_DECL(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
+// METABINARY_LINK_FN(PCMetaClass, GetMetaClassById, 0, (u32 id), (id))
 // }
 // ```
 #define METABINARY_LINK_FN(_return, _name, _index, _params, _args) \
@@ -589,8 +710,81 @@ private:
 // Note: Get the symbol of a MetaBinary linked function.
 //
 // Example:
+// ```
 // METABINARY_FN(BaseHooks, GetMetaClassById, 0).Hook();
+// ```
 #define METABINARY_FN(_namespace, _name, _index) \
   (_namespace :: __sfn_ ## _name ## _ ## _index ## __)
+
+// Note: Declare linking a member variable via MetaBinary. Place this macro in
+//       the class declaration. Afterward, it can be referenced like a normal
+//       member variable pointer.
+//       After using the MetaBinary declaration, it is not allowed to declare
+//       an ordinary member variable with the same name.
+//
+// Example:
+// ```
+// class Event {
+// public:
+//   METABINARY_LINK_MVAR(bool, Event, autoStart)
+//
+// private:
+//   bool IsAutoStart() const {
+//     return this->*autoStart;
+//   }
+// };
+// ```
+#define METABINARY_LINK_MVAR(_type, _namespace, _name) \
+  inline static MetaBinaryMemberVariable \
+    __var_ ## _name ## __ { \
+      #_namespace "::" #_name \
+    }; \
+  inline static MetaBinaryMemberVariableGetter<_type, _namespace> _name { \
+    &__var_ ## _name ## __ \
+  };
+
+// Note: Declare a global variable linked via MetaBinary. This macro must be
+//       placed within the namespace where the variable's declaration resides;
+//       afterward, it can be referenced just like a normal global variable.
+//
+// Example:
+// ```
+// namespace Sky {
+// METABINARY_LINK_VAR(Renderer *, g_Renderer)
+// }
+//
+// Renderer *GetRenderer() {
+//   return Sky::g_Renderer;
+// }
+// ```
+#define METABINARY_LINK_VAR(_type, _name) \
+  inline MetaBinaryVariable __var_ ## _name ## __ { #_name }; \
+  inline MetaBinaryVariableGetter<_type> _name { &__var_ ## _name ## __ };
+
+// Note: Get the symbol of a MetaBinary linked (member)variable.
+#define METABINARY_VAR(_namespace, _name) \
+  (_namespace :: __var_ ## _name ## __)
+
+// Note: Declare using MetaBinary to obtain an immediate value in the code
+//       or directly write a constant.
+//
+// Example:
+// ```
+// METABINARY_LINK_IMM(sizeof_Texture)
+// ```
+#define METABINARY_LINK_IMM(_name) \
+  inline MetaBinaryConstant __imm_ ## _name ## __ { #_name };
+
+// Note: Declare using MetaBinary to obtain an immediate value in the code
+//       or directly write a constant.
+//
+// Example:
+// ```
+// size_t GetSizeOfTexture() { 
+//   return METABINARY_IMM(, sizeof_Texture);
+// }
+// ```
+#define METABINARY_IMM(_namespace, _name) \
+  (_namespace :: __imm_ ## _name ## __)
 
 #endif

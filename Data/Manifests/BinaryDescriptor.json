@@ -2,6 +2,7 @@
   "netease": {
     "x64": {
       "Compositor::Render$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.16.5 2026.11.20
@@ -11,54 +12,66 @@
         ]
       },
       "GetRenderer$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 49 63 8D",
             "match": "$@ + $0x00:0 + 0x05"
           }
         ]
       },
       "FindRenderTarget$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 66 90 49 89 C0",
             "match": "$@ + $0x00:0 + 0x05"
           }
         ]
       },
       "Texture::GetReadableTexture$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 45 8B 44 BD",
             "match": "$@ + $0x00:0 + 0x05"
           }
         ]
       },
       "SystemIO::IsCapturingMovie$0": {
+        "desc_type": "virtual_function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "FF 90 ? ? ? ? 88 86 ? ? ? ? C6 86 ? ? ? ? 00",
             "match": "$0x0:0 / 8"
           }
         ]
       },
       "Renderer::GetPixels$0": {
+        "desc_type": "virtual_function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "41 FF 92 ? ? ? ? 48 8B 4E ? 48 89 B1",
             "match": "$0:0 / 8"
           }
         ]
       },
       "SystemIO::IsCapturingMovieCC$0": {
+        "desc_type": "virtual_function",
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "FF 90 ? ? ? ? 89 C1 88 86",
             "match": "$0:0 / 8"
           }
@@ -69,6 +82,7 @@
   "tgc": {
     "x64": {
       "Compositor::Render$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -79,6 +93,7 @@
         ]
       },
       "GetRenderer$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -89,6 +104,7 @@
         ]
       },
       "FindRenderTarget$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -99,6 +115,7 @@
         ]
       },
       "Texture::GetReadableTexture$0": {
+        "desc_type": "function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -109,6 +126,7 @@
         ]
       },
       "SystemIO::IsCapturingMovie$0": {
+        "desc_type": "virtual_function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -119,6 +137,7 @@
         ]
       },
       "Renderer::GetPixels$0": {
+        "desc_type": "virtual_function",
         "sig": [
           {
             // 0.32.2 2026.11.20
@@ -129,6 +148,7 @@
         ]
       },
       "SystemIO::IsCapturingMovieCC$0": {
+        "desc_type": "virtual_function",
         // UNUSED
         "slot": 0
       }

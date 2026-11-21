@@ -1,4 +1,5 @@
 ﻿#include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <rapidjson/document.h>
 #include <rapidjson/reader.h>
@@ -196,8 +197,12 @@ void BinaryDescriptor::Initialize(
   m_name = name;
 
   m_module = Win64SysCall::GetDlModule(init.module);
-  m_rva = init.rva;
-  m_slot = init.slot;
+  m_kind = init.kind;
+  m_fallback = init.fallback;
+  m_hasFallback = init.hasFallback;
+
+  if (m_kind == Kind::kInvalid)
+    LOGW("Descriptor [%s] has no valid desc_type", m_name.c_str());
 
   // Compile every candidate in order. An entry that cannot be built or whose
   // expression does not compile is dropped; the remaining ones keep their
@@ -231,8 +236,9 @@ void BinaryDescriptor::Terminate() {
 
   m_name.clear();
   m_module = 0;
-  m_rva = kInvalidRva;
-  m_slot = -1;
+  m_kind = Kind::kInvalid;
+  m_fallback = 0;
+  m_hasFallback = false;
   m_result = 0;
 
   m_evaluated = false;
@@ -241,6 +247,11 @@ void BinaryDescriptor::Terminate() {
 
 void BinaryDescriptor::Evaluate() {
   if (!m_initialized || m_evaluated)
+    return;
+
+  // A descriptor without a valid type cannot be interpreted, whatever the
+  // signatures yield.
+  if (m_kind == Kind::kInvalid)
     return;
 
   // The signatures go first: they survive the code moving, which is the whole
@@ -292,22 +303,35 @@ void BinaryDescriptor::Evaluate() {
     return;
   }
 
-  // Virtual function descriptor: no signature produced a slot, so fall back to
-  // the declared one.
-  if (m_slot >= 0) {
-    m_result = m_slot;
-    m_evaluated = true;
-    LOGW("%s failed to evaluate with signature, fallback to \"slot\"", m_name.c_str());
+  if (!m_hasFallback)
     return;
-  }
 
-  // Ordinary function descriptor: fall back to the module-relative address.
-  // GetDlModule() hands back the module base, so the address is base + RVA.
-  if (m_module && m_rva != kInvalidRva) {
-    m_result = static_cast<i64>(m_module + m_rva);
-    LOGW("%s failed to evaluate with signature, fallback to \"rva\"", m_name.c_str());
-    m_evaluated = true;
-    return;
+  switch (m_kind) {
+    case Kind::kFunction:
+    case Kind::kVariable:
+      // The fallback is a module-relative address.
+      if (m_module) {
+        m_result = static_cast<i64>(m_module + static_cast<uintptr_t>(m_fallback));
+        m_evaluated = true;
+        LOGW(
+          "%s failed to evaluate with signature, fallback to \"desc_fallback\"",
+          m_name.c_str());
+      }
+      break;
+
+    case Kind::kVirtualFunction:
+    case Kind::kMemberVariable:
+    case Kind::kConstant:
+      // The fallback is the result itself.
+      m_result = m_fallback;
+      m_evaluated = true;
+      LOGW(
+        "%s failed to evaluate with signature, fallback to \"desc_fallback\"",
+        m_name.c_str());
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -318,13 +342,18 @@ void BinaryDescriptor::Evaluate() {
 static BinaryDescriptorBarn *g_binaryDescriptorBarn = nullptr;
 
 static bool s_ReadNumberLike(
-  u64 *out,
+  i64 *out,
   const rapidjson::Value &value
 ) {
-  // WARN: In some cases, this function will silently fail, causing the RVA to
-  // not be correctly recognized.
   if (value.IsInt64()) {
     *out = value.GetInt64();
+    return true;
+  }
+
+  // Values above INT64_MAX (e.g. 0xFFFFFFFFFFFFFFFF) are still useful to a
+  // constant descriptor, so keep the bit pattern.
+  if (value.IsUint64()) {
+    *out = static_cast<i64>(value.GetUint64());
     return true;
   }
 
@@ -336,11 +365,34 @@ static bool s_ReadNumberLike(
     if (endptr == s)
       return false;
 
-    *out = offset;
+    *out = static_cast<i64>(offset);
     return true;
   }
 
   return false;
+}
+
+static BinaryDescriptor::Kind s_ParseKind(
+  const rapidjson::Value &value
+) {
+  using Kind = BinaryDescriptor::Kind;
+
+  if (!value.IsString())
+    return Kind::kInvalid;
+
+  cstring type = value.GetString();
+  if (strcmp(type, "function") == 0)
+    return Kind::kFunction;
+  if (strcmp(type, "virtual_function") == 0)
+    return Kind::kVirtualFunction;
+  if (strcmp(type, "variable") == 0)
+    return Kind::kVariable;
+  if (strcmp(type, "member_variable") == 0)
+    return Kind::kMemberVariable;
+  if (strcmp(type, "constant") == 0)
+    return Kind::kConstant;
+
+  return Kind::kInvalid;
 }
 
 static void s_ReadSignatureFromJson(
@@ -367,27 +419,21 @@ static void s_ReadDescFromJson(
   BinaryDescriptor::InitTypedef *init,
   const rapidjson::Value &json
 ) {
-  if (json.HasMember("rva"))
-    s_ReadNumberLike(&init->rva, json["rva"]);
+  if (json.HasMember("desc_type"))
+    init->kind = s_ParseKind(json["desc_type"]);
 
-  if (json.HasMember("slot") && json["slot"].IsInt())
-    init->slot = json["slot"].GetInt();
+  if (json.HasMember("desc_fallback"))
+    init->hasFallback =
+      s_ReadNumberLike(&init->fallback, json["desc_fallback"]);
 
   if (json.HasMember("module") && json["module"].IsString())
     init->module = json["module"].GetString();
 
-  if (json.HasMember("sig")) {
-    const rapidjson::Value &sig = json["sig"];
-
-    if (sig.IsObject()) {
-      // Legacy single-signature form.
-      s_ReadSignatureFromJson(init, sig);
-    } else if (sig.IsArray()) {
-      // Ordered candidate list: the first entry that scans and evaluates wins.
-      for (const rapidjson::Value &entry: sig.GetArray()) {
-        if (entry.IsObject())
-          s_ReadSignatureFromJson(init, entry);
-      }
+  if (json.HasMember("sig") && json["sig"].IsArray()) {
+    // Ordered candidate list: the first entry that scans and evaluates wins.
+    for (const rapidjson::Value &entry: json["sig"].GetArray()) {
+      if (entry.IsObject())
+        s_ReadSignatureFromJson(init, entry);
     }
   }
 }
