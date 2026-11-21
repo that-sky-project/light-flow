@@ -31,6 +31,12 @@
     <Filter Include="src\skylink\link">
       <UniqueIdentifier>{3b313ead-dbf0-483c-9af8-18e2fe323e51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\record\video">
+      <UniqueIdentifier>{9576ecc6-de27-4399-9ec6-46ac6442f357}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\record\audio">
+      <UniqueIdentifier>{1bb0978e-ab35-457f-ab16-51220a82f8fa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\utils\types.hpp">
@@ -120,20 +126,20 @@
     <ClInclude Include="..\src\record\modui.hpp">
       <Filter>src\record</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\record\frameGrabber.hpp">
-      <Filter>src\record</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\record\lightflow.hpp">
-      <Filter>src\record</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\record\sourcePixelFormat.hpp">
-      <Filter>src\record</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\record\videoEncoder.hpp">
       <Filter>src\record</Filter>
     </ClInclude>
     <ClInclude Include="..\src\record\hook.hpp">
       <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\video\frameGrabber.hpp">
+      <Filter>src\record\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\video\sourcePixelFormat.hpp">
+      <Filter>src\record\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\video\videoEncoder.hpp">
+      <Filter>src\record\video</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -193,20 +199,20 @@
     <ClCompile Include="..\src\utils\logger.cpp">
       <Filter>src\utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\record\frameGrabber.cpp">
-      <Filter>src\record</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\record\hook.cpp">
       <Filter>src\record</Filter>
     </ClCompile>
     <ClCompile Include="..\src\record\lightflow.cpp">
       <Filter>src\record</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\record\videoEncoder.cpp">
-      <Filter>src\record</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\skylink\link\skyRenderer.cpp">
       <Filter>src\skylink\link</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\video\frameGrabber.cpp">
+      <Filter>src\record\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\video\videoEncoder.cpp">
+      <Filter>src\record\video</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

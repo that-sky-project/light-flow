@@ -1,4 +1,3 @@
-#include "record/lightflow.hpp"
 
 #include <algorithm>
 #include <cstdarg>
@@ -18,6 +17,7 @@
 #include "skylink/skyTexture.hpp"
 #include "record/modui.hpp"
 #include "record/hook.hpp"
+#include "record/lightflow.hpp"
 
 static LightFlowMod *g_lightFlow = nullptr;
 

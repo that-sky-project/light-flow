@@ -17,8 +17,8 @@
 #include "skylink/skyCompositor.hpp"
 #include "record/modSettings.hpp"
 #include "record/modui.hpp"
-#include "record/frameGrabber.hpp"
-#include "record/videoEncoder.hpp"
+#include "record/video/frameGrabber.hpp"
+#include "record/video/videoEncoder.hpp"
 
 // The two Sky releases supported by this mod. The value comes from
 // HTGetGameStatus().edition (see mod.cpp).

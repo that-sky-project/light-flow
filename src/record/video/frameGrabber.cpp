@@ -1,4 +1,4 @@
-#include "record/frameGrabber.hpp"
+#include "record/video/frameGrabber.hpp"
 
 #include <cstdarg>
 #include <cstdio>

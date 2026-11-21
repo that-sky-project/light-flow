@@ -7,7 +7,7 @@
 #include "utils/types.hpp"
 #include "skylink/skyCompositor.hpp"
 #include "skylink/skyRenderer.hpp"
-#include "record/sourcePixelFormat.hpp"
+#include "record/video/sourcePixelFormat.hpp"
 
 // Reads the rtScreenshot render target. The render target table is learned by
 // hooking FindRenderTarget(), so no Compositor field offsets are needed; only
