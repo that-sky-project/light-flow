@@ -28,6 +28,9 @@
     <Filter Include="libraries\hde">
       <UniqueIdentifier>{2e57c67c-6a1c-48e3-8673-f576473387f3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\skylink\link">
+      <UniqueIdentifier>{3b313ead-dbf0-483c-9af8-18e2fe323e51}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\utils\types.hpp">
@@ -108,9 +111,6 @@
     <ClInclude Include="..\src\utils\pathUtils.hpp">
       <Filter>src\utils</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\utils\utf8Utils.hpp">
-      <Filter>src\utils</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\utils\winapicall.hpp">
       <Filter>src\utils</Filter>
     </ClInclude>
@@ -130,6 +130,9 @@
       <Filter>src\record</Filter>
     </ClInclude>
     <ClInclude Include="..\src\record\videoEncoder.hpp">
+      <Filter>src\record</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\hook.hpp">
       <Filter>src\record</Filter>
     </ClInclude>
   </ItemGroup>
@@ -201,6 +204,9 @@
     </ClCompile>
     <ClCompile Include="..\src\record\videoEncoder.cpp">
       <Filter>src\record</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp">
+      <Filter>src\skylink\link</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

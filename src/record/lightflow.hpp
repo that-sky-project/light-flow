@@ -112,8 +112,6 @@ private:
   void WorkerLoop();
   void ReapWorker();
 
-  bool EnsureMovieHook(Compositor *compositor);
-  void RemoveMovieHook();
   void DisableCore(cstring reason);
 
   std::string ResolveOutputPath(std::string &error);
@@ -142,7 +140,6 @@ private:
 
   FrameGrabber m_grabber;
   bool m_capturing = false;
-  bool m_forceMovie = true;
   bool m_showOverlay = true;
   bool m_swapRedBlue = false;
   i32 m_targetFps = 30;

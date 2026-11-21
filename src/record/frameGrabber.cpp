@@ -25,22 +25,6 @@ void FrameGrabber::Fail(cstring fmt, ...) {
   m_lastError = buffer;
 }
 
-bool FrameGrabber::ResolveTarget(RenderTarget **outTarget) {
-  if (!m_renderOutline || !m_targets) {
-    Fail("the render target table has not been captured yet");
-    return false;
-  }
-
-  RenderTarget *target = FindRenderTarget(*m_renderOutline, m_targets, "rtScreenshot");
-  if (!target) {
-    Fail("rtScreenshot is not registered (unsupported graphics feature?)");
-    return false;
-  }
-
-  *outTarget = target;
-  return true;
-}
-
 bool FrameGrabber::Grab(
   u32 frameIndex,
   std::vector<u08> &out,
@@ -55,55 +39,20 @@ bool FrameGrabber::Grab(
     return false;
   }
 
-  RenderTarget *target = nullptr;
+  const Texture *texture = FindRenderTargetTexture(
+    *m_renderOutline,
+    m_targets,
+    "rtScreenshot",
+    frameIndex
+  );
 
-  if (!ResolveTarget(&target))
-    return false;
-
-  // Multiple render targets with the same name form a chain. TakeScreenshot()
-  // walks to the last node before reading, so do the same.
-  usize chainLength = 0;
-  while (target->next && chainLength++ < 64)
-    target = target->next;
-
-  const RenderTargetLayout &rtLayout = *m_renderTargetLayout;
-  u08 *targetBase = reinterpret_cast<u08 *>(target);
-
-  u32 textureCount = *reinterpret_cast<u08 *>(
-    targetBase + rtLayout.textureCount);
-  if (textureCount == 0)
-    textureCount = 1;
-  if (textureCount > 2)
-    textureCount = 2;
-
-  // Texture slots are not the same size in both builds; index them with the
-  // edition's stride instead of sizeof(Texture).
-  u08 *textureBytes = targetBase + rtLayout.textureOffset +
-    static_cast<usize>(frameIndex % textureCount) * rtLayout.textureStride;
-  Texture *texture = reinterpret_cast<Texture *>(textureBytes);
-
-  // Texture::GetReadableTexture(): pick one of the texture's readable slots.
-  u32 slot = texture->GetReadableTexture(0);
+  // Pick one of the texture's readable slots. MetaBinary does not support const
+  // member functions, so we use const_cast.
+  u32 slot = const_cast<Texture *>(texture)->GetReadableTexture(0);
 
   Renderer *renderer = GetRenderer();
   if (!renderer) {
     Fail("renderer is not available");
-    return false;
-  }
-
-  // MetaBinaryVirtualFunction needs the real object's vftable to resolve the
-  // slot. The renderer is a process-wide singleton, so cache it once.
-  auto &getPixels = METABINARY_FN(Renderer, GetPixels, 0);
-  static Renderer *s_cachedRenderer = nullptr;
-  if (!s_cachedRenderer) {
-    getPixels.Cache(renderer);
-    if (!getPixels.Function().IsValid()) {
-      Fail("Renderer::GetPixels could not be resolved");
-      return false;
-    }
-    s_cachedRenderer = renderer;
-  } else if (s_cachedRenderer != renderer) {
-    Fail("renderer object changed");
     return false;
   }
 

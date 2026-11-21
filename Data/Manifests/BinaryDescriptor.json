@@ -101,6 +101,14 @@
             "match": "$0:0"
           }
         ]
+      },
+      "RenderTarget::textureCount": {
+        "desc_type": "member_variable",
+        "desc_fallback": 264
+      },
+      "sizeof_Texture": {
+        "desc_type": "constant",
+        "desc_fallback": 128
       }
     }
   },
@@ -200,6 +208,14 @@
             "match": "$0:0"
           }
         ]
+      },
+      "RenderTarget::textureCount": {
+        "desc_type": "member_variable",
+        "desc_fallback": 216
+      },
+      "sizeof_Texture": {
+        "desc_type": "constant",
+        "desc_fallback": 104
       }
     }
   }

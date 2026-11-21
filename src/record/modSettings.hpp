@@ -15,7 +15,6 @@ struct Settings {
   i32 bitrateKbps = 12000;
   i32 targetFps = 30;
   i32 queueSize = 4;
-  bool forceMovieMode = true;
   bool showOverlay = true;
   // Exchange the red and blue channels of every captured frame before it is
   // handed to the encoder.

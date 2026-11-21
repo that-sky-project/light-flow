@@ -19,6 +19,7 @@
     <ClInclude Include="..\src\metabinary\binaryDescriptor.hpp" />
     <ClInclude Include="..\src\metabinary\metabinary.hpp" />
     <ClInclude Include="..\src\record\frameGrabber.hpp" />
+    <ClInclude Include="..\src\record\hook.hpp" />
     <ClInclude Include="..\src\record\lightflow.hpp" />
     <ClInclude Include="..\src\record\modSettings.hpp" />
     <ClInclude Include="..\src\record\modui.hpp" />
@@ -58,6 +59,7 @@
     <ClCompile Include="..\src\record\modSettings.cpp" />
     <ClCompile Include="..\src\record\modui.cpp" />
     <ClCompile Include="..\src\record\videoEncoder.cpp" />
+    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp" />
     <ClCompile Include="..\src\utils\archUtils.cpp" />
     <ClCompile Include="..\src\utils\assert.cpp" />
     <ClCompile Include="..\src\utils\fsUtils.cpp" />

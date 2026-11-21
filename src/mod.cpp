@@ -14,6 +14,7 @@
 #include "metabinary/binaryDescriptor.hpp"
 #include "metabinary/metabinary.hpp"
 #include "record/lightflow.hpp"
+#include "record/hook.hpp"
 #include "skylink/skyCompositor.hpp"
 #include "skylink/skyRenderer.hpp"
 
@@ -21,17 +22,12 @@
 // [SECTION] Globals
 // ----------------------------------------------------------------------------
 
-static Logger *g_logger = nullptr;
-static LightFlowMod *g_lightFlowInstance = nullptr;
-static HMODULE g_module = nullptr;
-static bool g_metaBinaryReady = false;
-
-namespace {
+static bool g_Ready = false;
 
 // Map the HTModLoader game edition onto the descriptor profile name. Both the
 // MetaBinary descriptor list (BinaryDescriptor.json) and the structure layouts
 // in skylink use the same "netease"/"tgc" spelling.
-bool ResolveGameProfile(
+static bool s_ResolveGameProfile(
   HTGameEdition edition,
   GameProfile *out
 ) {
@@ -46,49 +42,16 @@ bool ResolveGameProfile(
   return false;
 }
 
-// Fetch ImGui's context and allocator from the loader and bind them to this
-// module's own ImGui build. Must run every frame: HTModRenderGui() may be
-// invoked on a different thread than the one that ran the previous frame.
-bool BindImGuiContext() {
-  HTImGuiContextsEx ctxex;
-  if (HTImGuiDispatchEx(&ctxex) != HT_SUCCESS || !ctxex.ctx.pImGui)
-    return false;
-
-  ImGui::SetCurrentContext((ImGuiContext *)ctxex.ctx.pImGui);
-
-  static bool allocatorsBound = false;
-  if (!allocatorsBound) {
-    allocatorsBound = true;
-    ImGui::SetAllocatorFunctions(
-      (ImGuiMemAllocFunc)ctxex.ctx.pImAllocatorAllocFunc,
-      (ImGuiMemFreeFunc)ctxex.ctx.pImAllocatorFreeFunc,
-      ctxex.ctx.pImAllocatorUserData);
-  }
-  return true;
-}
-
-// Report a fatal initialization problem to both the log file and the in-game
-// console, then leave the game running with the mod's features disabled.
-void ReportFatal(cstring message) {
-  LOGE("%s", message);
-  HTTellText("§5[Light Flow] %s", message);
-}
-
-} // namespace
-
 // ----------------------------------------------------------------------------
 // [SECTION] HTModLoader entry points
 // ----------------------------------------------------------------------------
 
 __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
-  g_module = HTModLoader::GetCurrentModuleHandle();
-  if (!g_module)
-    g_module = HTGetModuleHandle(nullptr);
+  HMODULE hModuleDll = HTModLoader::GetCurrentModuleHandle();
+  TgcWString folder = Win64SysCall::GetModuleFolder(hModuleDll);
 
-  TgcWString folder = Win64SysCall::GetModuleFolder(g_module);
-
-  g_logger = new Logger();
-  g_logger->Initialize(folder + L"\\light-flow.log");
+  // Logger will be cached by itself.
+  (new Logger())->Initialize(folder + L"\\light-flow.log");
 
   LOG("------------------------------------------------------------");
   LOG("<-- Light Flow -->");
@@ -107,7 +70,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   HTGetGameStatus(&status);
 
   GameProfile profile = GameProfile::kTgc;
-  if (!ResolveGameProfile(status.edition, &profile)) {
+  if (!s_ResolveGameProfile(status.edition, &profile)) {
     char message[256];
     snprintf(
       message,
@@ -117,7 +80,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
       status.edition,
       HT_ImplSky_EditionChinese,
       HT_ImplSky_EditionInternation);
-    ReportFatal(message);
+    LOGE(message);
     return HT_FAIL;
   }
 
@@ -129,7 +92,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   TgcString json = FsUtils::ReadFileUtf8(path);
 
   if (json.empty()) {
-    ReportFatal("Cannot read Data\\Manifests\\BinaryDescriptor.json");
+    LOGE("Cannot read Data\\Manifests\\BinaryDescriptor.json");
     return HT_FAIL;
   }
 
@@ -143,91 +106,52 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   auto *metaBinarySystem = new MetaBinarySystem();
   metaBinarySystem->Initialize(binaryDescriptorBarn);
   if (!metaBinarySystem->IsValid()) {
-    ReportFatal("MetaBinarySystem is incomplete, the mod has been shut down.");
+    LOGE("MetaBinarySystem is incomplete.");
     return HT_FAIL;
   }
-  g_metaBinaryReady = true;
   LOG("MetaBinarySystem initialized");
 
   // 4. Bring up the recorder and hook Compositor::Render(). The hook passes
   //    through to the original function at all times; capture is controlled by
   //    the F8/F9 hotkeys and by g_forceMovieThisRender.
-  g_lightFlowInstance = new LightFlowMod();
-  g_lightFlow = g_lightFlowInstance;
+  auto *lightFlow = new LightFlowMod();
 
-  if (!g_lightFlowInstance->Initialize(g_module, profile)) {
-    ReportFatal("LightFlowMod initialization failed.");
-    g_lightFlowInstance->Shutdown();
+  if (!lightFlow->Initialize(hModuleDll, profile)) {
+    LOGE("LightFlowMod initialization failed.");
+    lightFlow->Shutdown();
     return HT_FAIL;
   }
 
-  // Learn the compositor's render target table before anything needs it. A
-  // failure here means rtScreenshot can never be located, so disable the mod.
-  auto &findRenderTarget = METABINARY_FN(, FindRenderTarget, 0);
-  if (!findRenderTarget.Function().IsValid()) {
-    ReportFatal("FindRenderTarget is not linked, the mod has been shut down.");
-    g_lightFlowInstance->Shutdown();
+  if (!Hook::BaseHooks())
     return HT_FAIL;
-  }
-  if (!findRenderTarget.Hook()) {
-    ReportFatal("Cannot hook FindRenderTarget, the mod has been shut down.");
-    g_lightFlowInstance->Shutdown();
-    return HT_FAIL;
-  }
-  LOG(
-    "Hooked FindRenderTarget at %p",
-    reinterpret_cast<void *>(findRenderTarget.Function().Address()));
 
-  auto &render = METABINARY_FN(Compositor, Render, 0);
-  if (!render.Function().IsValid()) {
-    ReportFatal("Compositor::Render is not linked, the mod has been shut down.");
-    g_lightFlowInstance->Shutdown();
-    return HT_FAIL;
-  }
-
-  if (!render.Hook()) {
-    ReportFatal("Cannot hook Compositor::Render, the mod has been shut down.");
-    g_lightFlowInstance->Shutdown();
-    return HT_FAIL;
-  }
-  LOG(
-    "Hooked Compositor::Render at %p",
-    reinterpret_cast<void *>(render.Function().Address()));
-
+  g_Ready = true;
   return HT_SUCCESS;
 }
 
 __declspec(dllexport) void HTMLAPI HTModRenderGui(float timeElapsed, void *) {
   (void)timeElapsed;
 
-  if (!g_metaBinaryReady || !g_lightFlowInstance)
+  if (!g_Ready)
     return;
 
-  if (!BindImGuiContext())
-    return;
+  static bool s_first = true;
+  if (s_first) {
+    s_first = false;
 
-  g_lightFlowInstance->BuildScene();
+    HTImGuiContextsEx ctxex;
+    HTImGuiDispatchEx(&ctxex);
+
+    ImGui::SetCurrentContext((ImGuiContext *)ctxex.ctx.pImGui);
+    ImGui::SetAllocatorFunctions(
+      (ImGuiMemAllocFunc)ctxex.ctx.pImAllocatorAllocFunc,
+      (ImGuiMemFreeFunc)ctxex.ctx.pImAllocatorFreeFunc,
+      ctxex.ctx.pImAllocatorUserData);
+  }
+
+  GetLightFlowMod()->BuildScene();
 }
 
 __declspec(dllexport) HTStatus HTMLAPI HTModOnEnable(void *) {
-  return HT_SUCCESS;
-}
-
-__declspec(dllexport) HTStatus HTMLAPI HTModOnDisable(void *) {
-  if (g_lightFlowInstance)
-    g_lightFlowInstance->OnDisable();
-  return HT_SUCCESS;
-}
-
-__declspec(dllexport) HTStatus HTMLAPI HTModOnDeinit(void *) {
-  // The loader does not unload mods in practice and the game may still call
-  // the Compositor detour while shutting down, so stop the recording thread
-  // and leave the object itself alive.
-  if (g_lightFlowInstance)
-    g_lightFlowInstance->Shutdown();
-
-  if (g_logger)
-    g_logger->Terminate();
-
   return HT_SUCCESS;
 }
