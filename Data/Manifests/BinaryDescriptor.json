@@ -6,6 +6,7 @@
         "sig": [
           {
             // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 48 8B 8E ? ? ? ? E8 ? ? ? ? 48 8B 8E ? ? ? ? 48 85 C9 74",
             "match": "$@ + $0x00:0 + 0x05"
           }
@@ -74,6 +75,30 @@
             // 0.16.7 2026.11.21
             "pattern": "FF 90 ? ? ? ? 89 C1 88 86",
             "match": "$0:0 / 8"
+          }
+        ]
+      },
+      "Compositor::systemIO": {
+        "desc_type": "member_variable",
+        "sig": [
+          {
+            // From Compositor::Render()
+            // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
+            "pattern": "48 8B 8E ? ? ? ? ? ? ? FF 90 ? ? ? ? 89 C1",
+            "match": "$0:0"
+          }
+        ]
+      },
+      "Compositor::screenshotRequested": {
+        "desc_type": "member_variable",
+        "sig": [
+          {
+            // From Compositor::Render()
+            // 0.16.5 2026.11.20
+            // 0.16.7 2026.11.21
+            "pattern": "66 C7 86 ? ? ? ? 00 00 83 BE ? ? ? ? 00 0F 85",
+            "match": "$0:0"
           }
         ]
       }
@@ -150,7 +175,31 @@
       "SystemIO::IsCapturingMovieCC$0": {
         "desc_type": "virtual_function",
         // UNUSED
-        "slot": 0
+        "desc_fallback": 0
+      },
+      "Compositor::systemIO": {
+        "desc_type": "member_variable",
+        "sig": [
+          {
+            // From Compositor::Render()
+            // 0.32.2 2026.11.20
+            // 0.35.2 2026.11.21
+            "pattern": "48 8B 8E ? ? ? ? ? ? ? FF 90 ? ? ? ? 88 46",
+            "match": "$0:0"
+          }
+        ]
+      },
+      "Compositor::screenshotRequested": {
+        "desc_type": "member_variable",
+        "sig": [
+          {
+            // From Compositor::Render()
+            // 0.32.2 2026.11.20
+            // 0.35.2 2026.11.21
+            "pattern": "66 C7 46 ? 00 00 C7 86 ? ? ? ? 00 00 00 00",
+            "match": "$0:0"
+          }
+        ]
       }
     }
   }

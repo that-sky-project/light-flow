@@ -25,15 +25,6 @@ void FrameGrabber::Fail(cstring fmt, ...) {
   m_lastError = buffer;
 }
 
-void *FrameGrabber::GetSystemIO(
-  void *compositor,
-  const CompositorLayout &layout
-) {
-  if (!compositor)
-    return nullptr;
-  return *reinterpret_cast<void **>(ByteOffset(compositor, layout.systemIO));
-}
-
 bool FrameGrabber::ResolveTarget(RenderTarget **outTarget) {
   if (!m_renderOutline || !m_targets) {
     Fail("the render target table has not been captured yet");
@@ -152,7 +143,8 @@ bool FrameGrabber::Grab(
   }
 
   if (actual.bytesPerPixel == 0)
-    actual = logical; // unknown VkFormat: fall back to the logical format
+    // unknown VkFormat: fall back to the logical format.
+    actual = logical;
 
   // VulkanRenderer::GetPixels() computes bytesPerRow from the logical format.
   // A workaround that changes the pixel size would make it abort, so reject
@@ -180,11 +172,7 @@ bool FrameGrabber::Grab(
 
   // Wait for the GPU: pass waitForGpu = 1 so the frame that this render just
   // submitted is fully visible before the CPU copies it out.
-  renderer->GetPixels(
-    slot,
-    out.data(),
-    static_cast<i64>(rowBytes),
-    1);
+  renderer->GetPixels(slot, out.data(), static_cast<i64>(rowBytes), 1);
 
   pixelFormat = actual.pixelFormat;
   m_lastError.clear();

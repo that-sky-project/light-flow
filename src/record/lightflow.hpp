@@ -112,7 +112,7 @@ private:
   void WorkerLoop();
   void ReapWorker();
 
-  bool EnsureMovieHook(void *compositor);
+  bool EnsureMovieHook(Compositor *compositor);
   void RemoveMovieHook();
   void DisableCore(cstring reason);
 

@@ -412,9 +412,7 @@ void LightFlowMod::OnCompositorPreRender(Compositor *compositor) {
   const u08 *base = reinterpret_cast<const u08 *>(compositor);
   m_frameIndex = *reinterpret_cast<const u32 *>(
     base + m_compositorLayout->frameCounter);
-  m_screenshotPendingThisFrame =
-    *(base + m_compositorLayout->screenshotRequested) != 0;
-
+  m_screenshotPendingThisFrame = compositor->*Compositor::screenshotRequested;
 
   if (m_forceMovie && !m_movieHookInstalled)
     EnsureMovieHook(compositor);
@@ -561,24 +559,24 @@ bool LightFlowMod::ShouldForceMovie() const {
 // SystemIO::IsCapturingMovie hooks
 // ---------------------------------------------------------------------------
 
-bool LightFlowMod::EnsureMovieHook(void *compositor) {
+bool LightFlowMod::EnsureMovieHook(Compositor *compositor) {
   if (m_movieHookInstalled)
     return true;
   if (m_coreDisabled)
     return false;
 
-  void *systemIO = FrameGrabber::GetSystemIO(compositor, *m_compositorLayout);
+  SystemIO *systemIO = compositor->*Compositor::systemIO;
   if (!systemIO) {
     DisableCore("SystemIO is unavailable; recording has been disabled.");
     return false;
   }
 
-  auto *object = reinterpret_cast<SystemIO *>(systemIO);
-
   auto &vf0 = METABINARY_FN(SystemIO, IsCapturingMovie, 0);
   if (!vf0.Function().IsValid())
-    vf0.Cache(object);
+    // Try to cache vftable first.
+    vf0.Cache(systemIO);
   if (!vf0.Function().IsValid()) {
+    // Report error if still failed.
     DisableCore(
       "SystemIO::IsCapturingMovie could not be resolved; recording has been "
       "disabled.");
@@ -596,7 +594,7 @@ bool LightFlowMod::EnsureMovieHook(void *compositor) {
   if (m_profile == GameProfile::kNetEase) {
     auto &vf1 = METABINARY_FN(SystemIO, IsCapturingMovieCC, 0);
     if (!vf1.Function().IsValid())
-      vf1.Cache(object);
+      vf1.Cache(systemIO);
     // Both slots may resolve to the same implementation in some builds;
     // hooking the same address twice would chain two detours.
     if (vf1.Function().IsValid() &&

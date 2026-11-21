@@ -50,12 +50,6 @@ public:
     // LOG("Cached RenderTarget(s): 0x%p", m_targets);
   }
 
-  // Resolve the SystemIO object owned by the compositor.
-  static void *GetSystemIO(
-    void *compositor,
-    const CompositorLayout &layout
-  );
-
   // Read the current rtScreenshot pixels into `out`. `frameIndex` must be the
   // compositor's frame counter as it was before the render call (the render
   // graph uses it to select the ping-pong texture).
