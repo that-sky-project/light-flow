@@ -27,18 +27,12 @@ void FrameGrabber::Fail(cstring fmt, ...) {
 
 bool FrameGrabber::Grab(
   u32 frameIndex,
-  std::vector<u08> &out,
-  i32 &width,
-  i32 &height,
-  SourcePixelFormat &pixelFormat,
-  u32 &gfxFormat,
-  u32 &vkFormat
+  std::vector<u08> *out,
+  i32 *width,
+  i32 *height,
+  SourcePixelFormat *pixelFormat,
+  GfxTexelFormat *texelFormat
 ) {
-  if (!m_rendererLayout || !m_renderTargetLayout) {
-    Fail("renderer layout is not configured");
-    return false;
-  }
-
   const Texture *texture = FindRenderTargetTexture(
     *m_renderOutline,
     m_targets,
@@ -56,74 +50,31 @@ bool FrameGrabber::Grab(
     return false;
   }
 
-  const RendererLayout &layout = *m_rendererLayout;
+  i32 w = texture->m_descriptor.width
+    , h = texture->m_descriptor.height;
+  GfxTexelFormat format = texture->m_descriptor.format;
 
-  u08 *records = *reinterpret_cast<u08 **>(
-    ByteOffset(renderer, layout.textureRecords));
-  if (!records) {
-    Fail("the renderer texture table is null");
-    return false;
-  }
+  *texelFormat = format;
+  *width = w;
+  *height = h;
 
-  u08 *record = records + static_cast<usize>(slot) * layout.textureRecordStride;
+  SourceFormatInfo logical = GetSourceFormatInfo(texture->m_descriptor.format);
 
-  // The renderer keeps two formats per texture:
-  //  - +176: the logical GfxTexelFormat requested by the descriptor
-  //  - +96 : the actual VkFormat after SuitableTextureFormat() workarounds
-  // The workaround can swap RGBA/BGRA, so the channel order must come from the
-  // actual VkFormat.
-  gfxFormat = static_cast<u08>(record[layout.textureRecordFormat]);
-  vkFormat = *reinterpret_cast<u32 *>(
-    record + layout.textureRecordVkFormat);
-
-  width = static_cast<i32>(*reinterpret_cast<u32 *>(
-    record + layout.textureRecordWidth));
-  height = static_cast<i32>(*reinterpret_cast<u32 *>(
-    record + layout.textureRecordHeight));
-
-  SourceFormatInfo logical = GetSourceFormatInfo(gfxFormat);
-  SourceFormatInfo actual = GetVkFormatInfo(vkFormat);
-
-  // GetPixels() aborts on an unknown logical format before it copies anything,
-  // so refuse the frame instead of letting the game terminate.
-  if (logical.bytesPerPixel == 0) {
-    Fail("rtScreenshot uses unsupported logical format %u", gfxFormat);
-    return false;
-  }
-
-  if (actual.bytesPerPixel == 0)
-    // unknown VkFormat: fall back to the logical format.
-    actual = logical;
-
-  // VulkanRenderer::GetPixels() computes bytesPerRow from the logical format.
-  // A workaround that changes the pixel size would make it abort, so reject
-  // that combination instead of calling into it.
-  if (logical.bytesPerPixel != actual.bytesPerPixel) {
-    Fail(
-      "rtScreenshot format workaround changed bpp (logical %u=%u, "
-      "VkFormat %u=%u)",
-      gfxFormat,
-      logical.bytesPerPixel,
-      vkFormat,
-      actual.bytesPerPixel);
-    return false;
-  }
-
-  if (width <= 0 || height <= 0 || width > 8192 || height > 8192) {
+  if (w <= 0 || h <= 0 || w > 8192 || h > 8192) {
     Fail("rtScreenshot has invalid size %dx%d", width, height);
     return false;
   }
 
-  usize rowBytes = static_cast<usize>(width) * actual.bytesPerPixel;
-  usize frameBytes = rowBytes * static_cast<usize>(height);
+  usize rowBytes = static_cast<usize>(w) * BytesPerPixel(format);
+  usize frameBytes = rowBytes * static_cast<usize>(h);
 
-  out.resize(frameBytes);
+  out->resize(frameBytes);
 
   // Wait for the GPU: pass waitForGpu = 1 so the frame that this render just
   // submitted is fully visible before the CPU copies it out.
-  renderer->GetPixels(slot, out.data(), static_cast<i64>(rowBytes), 1);
+  renderer->GetPixels(slot, out->data(), static_cast<i64>(rowBytes), 1);
 
-  pixelFormat = actual.pixelFormat;
+  *pixelFormat = logical.pixelFormat;
   m_lastError.clear();
   return true;
 }

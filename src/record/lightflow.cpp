@@ -76,9 +76,6 @@ bool LightFlowMod::Initialize(HMODULE module, GameProfile profile) {
   m_module = module;
   m_profile = profile;
   m_compositorLayout = &GetCompositorLayout(profile);
-  m_rendererLayout = &GetRendererLayout(profile);
-  m_renderTargetLayout = &GetRenderTargetLayout(profile);
-  m_grabber.SetLayout(m_rendererLayout, m_renderTargetLayout);
 
   m_modFolder = Win64SysCall::GetModuleFolder(module);
   m_capturesFolder = PathUtils::Join({m_modFolder, L"captures"});
@@ -471,17 +468,17 @@ void LightFlowMod::OnCompositorRender(
   i32 width = 0;
   i32 height = 0;
   SourcePixelFormat pixelFormat = kSourcePixelFormat_Unknown;
-  u32 gfxFormat = 0;
+  GfxTexelFormat gfxFormat = kGfxTexelFormat_Undefined;
   u32 vkFormat = 0;
 
   if (!m_grabber.Grab(
-        m_frameIndex,
-        buffer,
-        width,
-        height,
-        pixelFormat,
-        gfxFormat,
-        vkFormat)) {
+    m_frameIndex,
+    &buffer,
+    &width,
+    &height,
+    &pixelFormat,
+    &gfxFormat
+  )) {
     u64 elapsedMs = static_cast<u64>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
         now - m_startTime).count());

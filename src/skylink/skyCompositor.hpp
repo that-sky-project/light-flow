@@ -37,31 +37,4 @@ inline constexpr CompositorLayout kCompositorLayoutTgc = {
   /* frameCounter */ 316
 };
 
-struct RendererLayout {
-  usize textureRecords;
-  usize textureRecordStride;
-  usize textureRecordWidth;
-  usize textureRecordHeight;
-  usize textureRecordVkFormat;
-  usize textureRecordFormat;
-};
-
-inline constexpr RendererLayout kRendererLayoutNetease = {
-  /* textureRecords */ 4136,
-  /* textureRecordStride */ 184,
-  /* textureRecordWidth */ 100,
-  /* textureRecordHeight */ 104,
-  /* textureRecordVkFormat */ 96,
-  /* textureRecordFormat */ 176,
-};
-
-inline constexpr RendererLayout kRendererLayoutTgc = {
-  /* textureRecords */ 4120,
-  /* textureRecordStride */ 184,
-  /* textureRecordWidth */ 100,
-  /* textureRecordHeight */ 104,
-  /* textureRecordVkFormat */ 96,
-  /* textureRecordFormat */ 176,
-};
-
 #endif

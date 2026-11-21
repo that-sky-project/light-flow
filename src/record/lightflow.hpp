@@ -37,18 +37,6 @@ inline const CompositorLayout &GetCompositorLayout(GameProfile profile) {
     : kCompositorLayoutTgc;
 }
 
-inline const RendererLayout &GetRendererLayout(GameProfile profile) {
-  return profile == GameProfile::kNetEase
-    ? kRendererLayoutNetease
-    : kRendererLayoutTgc;
-}
-
-inline const RenderTargetLayout &GetRenderTargetLayout(GameProfile profile) {
-  return profile == GameProfile::kNetEase
-    ? kRenderTargetLayoutNetease
-    : kRenderTargetLayoutTgc;
-}
-
 // ----------------------------------------------------------------------------
 // [SECTION] LightFlowMod
 // ----------------------------------------------------------------------------
@@ -128,8 +116,6 @@ private:
   HMODULE m_module = nullptr;
   GameProfile m_profile = GameProfile::kTgc;
   const CompositorLayout *m_compositorLayout = &kCompositorLayoutTgc;
-  const RendererLayout *m_rendererLayout = &kRendererLayoutTgc;
-  const RenderTargetLayout *m_renderTargetLayout = &kRenderTargetLayoutTgc;
 
   std::wstring m_modFolder;
   std::wstring m_capturesFolder;

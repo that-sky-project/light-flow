@@ -16,14 +16,6 @@ class FrameGrabber {
 public:
   FrameGrabber() = default;
 
-  inline void SetLayout(
-    const RendererLayout *rendererLayout,
-    const RenderTargetLayout *renderTargetLayout
-  ) {
-    m_rendererLayout = rendererLayout;
-    m_renderTargetLayout = renderTargetLayout;
-  }
-
   // Supplied by the FindRenderTarget() detour whenever it successfully looks up
   // "rtScreenshot".
   inline void SetRenderTargets(
@@ -55,12 +47,11 @@ public:
   // graph uses it to select the ping-pong texture).
   bool Grab(
     u32 frameIndex,
-    std::vector<u08> &out,
-    i32 &width,
-    i32 &height,
-    SourcePixelFormat &pixelFormat,
-    u32 &gfxFormat,
-    u32 &vkFormat
+    std::vector<u08> *out,
+    i32 *width,
+    i32 *height,
+    SourcePixelFormat *pixelFormat,
+    GfxTexelFormat *texelFormat
   );
 
   const std::string &LastError() const { return m_lastError; }
@@ -73,8 +64,6 @@ private:
   bool m_isRenderTargetSet = false;
   const RenderOutline *m_renderOutline = nullptr;
   const RenderTarget *m_targets = nullptr;
-  const RendererLayout *m_rendererLayout = nullptr;
-  const RenderTargetLayout *m_renderTargetLayout = nullptr;
   std::string m_lastError;
 };
 

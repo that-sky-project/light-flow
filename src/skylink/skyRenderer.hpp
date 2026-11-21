@@ -15,28 +15,6 @@ struct RenderTarget {
   METABINARY_LINK_MVAR(u08, RenderTarget, textureCount)
 };
 
-// Layout of RenderTarget for each edition. The two ping-pong Texture slots
-// have different sizes, so textureCount and the second texture move as well.
-struct RenderTargetLayout {
-  usize textureOffset;
-  usize textureStride;
-  usize textureCount;
-};
-
-// Sky_dump (NetEase) uses 128-byte texture slots.
-inline constexpr RenderTargetLayout kRenderTargetLayoutNetease = {
-  /* textureOffset */ 8,
-  /* textureStride */ 128,
-  /* textureCount */ 264,
-};
-
-// Sky-32.2-260129 (TGC) uses 104-byte texture slots.
-inline constexpr RenderTargetLayout kRenderTargetLayoutTgc = {
-  /* textureOffset */ 8,
-  /* textureStride */ 104,
-  /* textureCount */ 216,
-};
-
 class Renderer {
 public:
   virtual ~Renderer() = default;
