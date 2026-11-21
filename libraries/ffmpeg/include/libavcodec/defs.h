@@ -77,15 +77,6 @@
 #define AV_PROFILE_MPEG2_AAC_LOW  128
 #define AV_PROFILE_MPEG2_AAC_HE   131
 
-#define AV_PROFILE_ASTC_LDR_SRGB        1 ///< sRGB LDR.
-#define AV_PROFILE_ASTC_LDR             2 ///< Linear LDR.
-#define AV_PROFILE_ASTC_HDR_RGB_LDR_A   3 ///< HDR RGB with LDR alpha.
-#define AV_PROFILE_ASTC_HDR             4 ///< HDR RGB and alpha.
-/* Linear interpretation of a stream, without restricting its block endpoint
- * encodings to an LDR or HDR profile. This is stream metadata and does not
- * select an encoding profile. */
-#define AV_PROFILE_ASTC_LINEAR_ANY      5
-
 #define AV_PROFILE_DNXHD         0
 #define AV_PROFILE_DNXHR_LB      1
 #define AV_PROFILE_DNXHR_SQ      2
@@ -105,11 +96,6 @@
 #define AV_PROFILE_EAC3_DDP_ATMOS         30
 
 #define AV_PROFILE_TRUEHD_ATMOS           30
-
-#define AV_PROFILE_MPEGH_3DA_MAIN      0
-#define AV_PROFILE_MPEGH_3DA_HIGH      1
-#define AV_PROFILE_MPEGH_3DA_LC        2
-#define AV_PROFILE_MPEGH_3DA_BL        3
 
 #define AV_PROFILE_MPEG2_422           0
 #define AV_PROFILE_MPEG2_HIGH          1
@@ -199,9 +185,6 @@
 #define AV_PROFILE_PRORES_4444      4
 #define AV_PROFILE_PRORES_XQ        5
 
-#define AV_PROFILE_PRORES_RAW       0
-#define AV_PROFILE_PRORES_RAW_HQ    1
-
 #define AV_PROFILE_ARIB_PROFILE_A 0
 #define AV_PROFILE_ARIB_PROFILE_C 1
 
@@ -210,14 +193,6 @@
 
 #define AV_PROFILE_EVC_BASELINE             0
 #define AV_PROFILE_EVC_MAIN                 1
-
-#define AV_PROFILE_APV_422_10  33
-#define AV_PROFILE_APV_422_12  44
-#define AV_PROFILE_APV_444_10  55
-#define AV_PROFILE_APV_444_12  66
-#define AV_PROFILE_APV_4444_10 77
-#define AV_PROFILE_APV_4444_12 88
-#define AV_PROFILE_APV_400_10  99
 
 
 #define AV_LEVEL_UNKNOWN                  -99
@@ -349,20 +324,6 @@ typedef struct AVProducerReferenceTime {
     int64_t wallclock;
     int flags;
 } AVProducerReferenceTime;
-
-/**
- * RTCP SR (Sender Report) information
- *
- * The received sender report information for an RTSP
- * stream, exposed as AV_PKT_DATA_RTCP_SR side data.
- */
-typedef struct AVRTCPSenderReport {
-    uint32_t ssrc; ///< Synchronization source identifier
-    uint64_t ntp_timestamp; ///< NTP time when the report was sent
-    uint32_t rtp_timestamp; ///< RTP time when the report was sent
-    uint32_t sender_nb_packets; ///< Total number of packets sent
-    uint32_t sender_nb_bytes; ///< Total number of bytes sent (excluding headers or padding)
-} AVRTCPSenderReport;
 
 /**
  * Encode extradata length to a buffer. Used by xiph codecs.
