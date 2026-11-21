@@ -21,22 +21,25 @@ public:
     static bool s_first = true;
     static bool s_hooked = false;
     if (s_first) {
-      if (!Hook::LinkCompositor(this, mod->Profile()) || !Hook::LinkRenderer())
-        LOGE("Failed to install hooks of SystemIO");
-      else
+      if (!Hook::LinkCompositor(this, mod->Profile()) || !Hook::LinkRenderer()) {
+        LOGE("Failed to link SystemIO or Renderer");
+        mod->Shutdown();
+      } else
         s_hooked = true;
       s_first = false;
     }
 
-    if (!s_hooked)
+    if (!s_hooked) {
       METABINARY_FN(Compositor, Render, 0).Call(this, jobBarn, cameraSystem, systemUI);
+      return;
+    }
 
     mod->OnCompositorPreRender(this);
 
     // Force movie mode only for the IsCapturingMovie() queries that happen
     // inside this Compositor::Render() call. Other game systems keep seeing the
     // original value, which keeps the normal screen rendering alive.
-    bool forceMovie = mod && mod->ShouldForceMovie() && mod->IsMovieModeActive();
+    bool forceMovie = mod && mod->ShouldForceMovie();
 
     g_forceMovieThisRender = forceMovie;
     METABINARY_FN(Compositor, Render, 0).Call(this, jobBarn, cameraSystem, systemUI);
@@ -194,18 +197,15 @@ void UnlinkCompositor() {
 bool LinkRenderer() {
   Renderer *renderer = GetRenderer();
   auto &vf = METABINARY_FN(Renderer, GetPixels, 0);
-  static Renderer *s_cachedRenderer = nullptr;
-  if (!s_cachedRenderer) {
+  if (!vf.Function().IsValid()) {
     vf.Cache(renderer);
     if (!vf.Function().IsValid()) {
       LOGE("Renderer::GetPixels could not be resolved");
       return false;
     }
-    s_cachedRenderer = renderer;
-  } else if (s_cachedRenderer != renderer) {
-    LOGE("renderer object changed");
-    return false;
   }
+
+  return true;
 }
 
 }

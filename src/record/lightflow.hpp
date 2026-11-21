@@ -86,9 +86,9 @@ public:
   void OnDisable();
 
   bool ShouldForceMovie() const;
-  bool IsMovieModeActive() const { return m_movieHookInstalled; }
 
   bool IsMenuOpen() const;
+  bool IsInitialized() const { return m_initialized; }
   bool IsCapturing() const { return m_capturing; }
   bool IsCoreDisabled() const { return m_coreDisabled; }
 
@@ -175,9 +175,6 @@ private:
   // Settings are written back once editing has been idle for a moment.
   bool m_settingsDirty = false;
   std::chrono::steady_clock::time_point m_settingsDirtyTime;
-
-  // Movie hook.
-  bool m_movieHookInstalled = false;
 
   // Set when a required hook cannot be installed. The mod then stops
   // recording and refuses to start again.

@@ -135,6 +135,10 @@ __declspec(dllexport) void HTMLAPI HTModRenderGui(float timeElapsed, void *) {
   if (!g_Ready)
     return;
 
+  LightFlowMod *mod = GetLightFlowMod();
+  if (!mod->IsInitialized())
+    return;
+
   static bool s_first = true;
   if (s_first) {
     s_first = false;
@@ -149,7 +153,7 @@ __declspec(dllexport) void HTMLAPI HTModRenderGui(float timeElapsed, void *) {
       ctxex.ctx.pImAllocatorUserData);
   }
 
-  GetLightFlowMod()->BuildScene();
+  mod->BuildScene();
 }
 
 __declspec(dllexport) HTStatus HTMLAPI HTModOnEnable(void *) {
