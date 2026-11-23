@@ -9,31 +9,10 @@ class RenderOutline;
 
 struct RenderTarget {
   RenderTarget *next;
-  Texture texture[2];
-  u08 textureCount;
-  u08 _pad0[7];
-};
+  Texture textures;
+  // IMCOMPLETE
 
-// Layout of RenderTarget for each edition. The two ping-pong Texture slots
-// have different sizes, so textureCount and the second texture move as well.
-struct RenderTargetLayout {
-  usize textureOffset;
-  usize textureStride;
-  usize textureCount;
-};
-
-// Sky_dump (NetEase) uses 128-byte texture slots.
-inline constexpr RenderTargetLayout kRenderTargetLayoutNetease = {
-  /* textureOffset */ 8,
-  /* textureStride */ 128,
-  /* textureCount */ 264,
-};
-
-// Sky-32.2-260129 (TGC) uses 104-byte texture slots.
-inline constexpr RenderTargetLayout kRenderTargetLayoutTgc = {
-  /* textureOffset */ 8,
-  /* textureStride */ 104,
-  /* textureCount */ 216,
+  METABINARY_LINK_MVAR(u08, RenderTarget, textureCount)
 };
 
 class Renderer {
@@ -52,5 +31,13 @@ METABINARY_LINK_FN(RenderTarget *, FindRenderTarget, 0,
   (const RenderOutline &renderOutline, const RenderTarget *renderTargets, cstring name),
   (renderOutline, renderTargets, name)
 )
+
+usize BytesPerPixel(GfxTexelFormat texelFormat);
+const Texture *FindRenderTargetTexture(
+  const RenderOutline &renderOutline,
+  const RenderTarget *renderTargets,
+  cstring name,
+  u32 index
+);
 
 #endif

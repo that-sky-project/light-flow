@@ -165,6 +165,14 @@ enum GfxTexelFormat: u08 {
   kGfxTexelFormat_BC7_RGBA_sRGB,
 };
 
+enum GfxTextureType: u08 {
+  kGfxTextureType_Undefined = 0,
+  kGfxTextureType_2D,
+  kGfxTextureType_3D,
+  kGfxTextureType_Cube,
+  kGfxTextureType_CubeArray,
+};
+
 enum GfxBufferType: u08 {
   kGfxBufferType_Undefined = 0,
   kGfxBufferType_Staging,

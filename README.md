@@ -91,4 +91,4 @@
 
 - 本模组软件和相关文档文件不是网易及ThatGameCompany的官方产品，未经上述二者批准且与上述二者无关。
 
-- FFmpeg的许可证文件[见此](https://github.com/that-sky-project/light-flow/blob/main/libraries/ffmpeg/LICENSE.txt)。
+- FFmpeg 7.1.1的许可证文件[见此](https://github.com/that-sky-project/light-flow/blob/main/libraries/ffmpeg/LICENSE)。

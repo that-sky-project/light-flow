@@ -17,8 +17,8 @@
 #include "skylink/skyCompositor.hpp"
 #include "record/modSettings.hpp"
 #include "record/modui.hpp"
-#include "record/frameGrabber.hpp"
-#include "record/videoEncoder.hpp"
+#include "record/video/frameGrabber.hpp"
+#include "record/video/videoEncoder.hpp"
 
 // The two Sky releases supported by this mod. The value comes from
 // HTGetGameStatus().edition (see mod.cpp).
@@ -35,18 +35,6 @@ inline const CompositorLayout &GetCompositorLayout(GameProfile profile) {
   return profile == GameProfile::kNetEase
     ? kCompositorLayoutNetease
     : kCompositorLayoutTgc;
-}
-
-inline const RendererLayout &GetRendererLayout(GameProfile profile) {
-  return profile == GameProfile::kNetEase
-    ? kRendererLayoutNetease
-    : kRendererLayoutTgc;
-}
-
-inline const RenderTargetLayout &GetRenderTargetLayout(GameProfile profile) {
-  return profile == GameProfile::kNetEase
-    ? kRenderTargetLayoutNetease
-    : kRenderTargetLayoutTgc;
 }
 
 // ----------------------------------------------------------------------------
@@ -86,9 +74,9 @@ public:
   void OnDisable();
 
   bool ShouldForceMovie() const;
-  bool IsMovieModeActive() const { return m_movieHookInstalled; }
 
   bool IsMenuOpen() const;
+  bool IsInitialized() const { return m_initialized; }
   bool IsCapturing() const { return m_capturing; }
   bool IsCoreDisabled() const { return m_coreDisabled; }
 
@@ -112,8 +100,6 @@ private:
   void WorkerLoop();
   void ReapWorker();
 
-  bool EnsureMovieHook(void *compositor);
-  void RemoveMovieHook();
   void DisableCore(cstring reason);
 
   std::string ResolveOutputPath(std::string &error);
@@ -130,8 +116,6 @@ private:
   HMODULE m_module = nullptr;
   GameProfile m_profile = GameProfile::kTgc;
   const CompositorLayout *m_compositorLayout = &kCompositorLayoutTgc;
-  const RendererLayout *m_rendererLayout = &kRendererLayoutTgc;
-  const RenderTargetLayout *m_renderTargetLayout = &kRenderTargetLayoutTgc;
 
   std::wstring m_modFolder;
   std::wstring m_capturesFolder;
@@ -142,7 +126,6 @@ private:
 
   FrameGrabber m_grabber;
   bool m_capturing = false;
-  bool m_forceMovie = true;
   bool m_showOverlay = true;
   bool m_swapRedBlue = false;
   i32 m_targetFps = 30;
@@ -179,9 +162,6 @@ private:
   bool m_settingsDirty = false;
   std::chrono::steady_clock::time_point m_settingsDirtyTime;
 
-  // Movie hook.
-  bool m_movieHookInstalled = false;
-
   // Set when a required hook cannot be installed. The mod then stops
   // recording and refuses to start again.
   bool m_coreDisabled = false;
@@ -197,11 +177,6 @@ private:
 };
 
 extern LightFlowMod *g_lightFlow;
-
-// Set only while the hooked Compositor::Render() is running. The
-// SystemIO::IsCapturingMovie detours consult this flag, so the rest of the
-// game (main loop, platform integration, input) still sees the real value.
-extern bool g_forceMovieThisRender;
 
 LightFlowMod *GetLightFlowMod();
 

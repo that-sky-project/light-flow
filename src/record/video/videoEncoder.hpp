@@ -5,7 +5,7 @@
 
 #include "utils/types.hpp"
 #include "skylink/skyGfx.hpp"
-#include "record/sourcePixelFormat.hpp"
+#include "record/video/sourcePixelFormat.hpp"
 
 // Thin FFmpeg wrapper that turns consecutive RGBA/BGRA frames into an H.264
 // (or MPEG-4) video file or network stream.

@@ -1,4 +1,3 @@
-#include "record/lightflow.hpp"
 
 #include <algorithm>
 #include <cstdarg>
@@ -17,9 +16,10 @@
 #include "skylink/skySystemIO.hpp"
 #include "skylink/skyTexture.hpp"
 #include "record/modui.hpp"
+#include "record/hook.hpp"
+#include "record/lightflow.hpp"
 
-LightFlowMod *g_lightFlow = nullptr;
-bool g_forceMovieThisRender = false;
+static LightFlowMod *g_lightFlow = nullptr;
 
 namespace {
 
@@ -68,13 +68,11 @@ bool LightFlowMod::Initialize(HMODULE module, GameProfile profile) {
   if (m_initialized)
     return true;
   m_initialized = true;
+  g_lightFlow = this;
 
   m_module = module;
   m_profile = profile;
   m_compositorLayout = &GetCompositorLayout(profile);
-  m_rendererLayout = &GetRendererLayout(profile);
-  m_renderTargetLayout = &GetRenderTargetLayout(profile);
-  m_grabber.SetLayout(m_rendererLayout, m_renderTargetLayout);
 
   m_modFolder = Win64SysCall::GetModuleFolder(module);
   m_capturesFolder = PathUtils::Join({m_modFolder, L"captures"});
@@ -117,7 +115,6 @@ void LightFlowMod::Shutdown() {
   m_initialized = false;
 
   StopCapture(true);
-  RemoveMovieHook();
 
   if (m_hotkeyMenu != HT_INVALID_HANDLE) {
     HTHotkeyUnlisten(m_hotkeyMenu, nullptr);
@@ -141,7 +138,6 @@ void LightFlowMod::MarkSettingsDirty() {
 }
 
 void LightFlowMod::SyncSettingsToUi() {
-  m_forceMovie = m_settings.forceMovieMode;
   m_showOverlay = m_settings.showOverlay;
   m_swapRedBlue = m_settings.swapRedBlue;
   m_targetFps = m_settings.targetFps;
@@ -227,7 +223,6 @@ void LightFlowMod::StartCapture() {
   m_activeCodec = m_settings.codec;
   m_activeBitrate = std::max(100, m_settings.bitrateKbps);
   m_activeFps = m_settings.targetFps > 0 ? m_settings.targetFps : 30;
-  m_forceMovie = m_settings.forceMovieMode;
   m_showOverlay = m_settings.showOverlay;
   m_swapRedBlue = m_settings.swapRedBlue;
   m_targetFps = m_settings.targetFps;
@@ -412,12 +407,7 @@ void LightFlowMod::OnCompositorPreRender(Compositor *compositor) {
   const u08 *base = reinterpret_cast<const u08 *>(compositor);
   m_frameIndex = *reinterpret_cast<const u32 *>(
     base + m_compositorLayout->frameCounter);
-  m_screenshotPendingThisFrame =
-    *(base + m_compositorLayout->screenshotRequested) != 0;
-
-
-  if (m_forceMovie && !m_movieHookInstalled)
-    EnsureMovieHook(compositor);
+  m_screenshotPendingThisFrame = compositor->*Compositor::screenshotRequested;
 }
 
 void LightFlowMod::OnRenderTargetsFound(
@@ -442,7 +432,7 @@ void LightFlowMod::OnCompositorRender(
 
   // Movie mode was requested but the SystemIO hook is not installed yet;
   // rtScreenshot would still hold a normal (or stale) frame this frame.
-  if (m_forceMovie && !movieMode)
+  if (!movieMode)
     return;
 
   // The compositor records the path it actually took in `outputMode` (1 =
@@ -475,17 +465,17 @@ void LightFlowMod::OnCompositorRender(
   i32 width = 0;
   i32 height = 0;
   SourcePixelFormat pixelFormat = kSourcePixelFormat_Unknown;
-  u32 gfxFormat = 0;
+  GfxTexelFormat gfxFormat = kGfxTexelFormat_Undefined;
   u32 vkFormat = 0;
 
   if (!m_grabber.Grab(
-        m_frameIndex,
-        buffer,
-        width,
-        height,
-        pixelFormat,
-        gfxFormat,
-        vkFormat)) {
+    m_frameIndex,
+    &buffer,
+    &width,
+    &height,
+    &pixelFormat,
+    &gfxFormat
+  )) {
     u64 elapsedMs = static_cast<u64>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
         now - m_startTime).count());
@@ -551,73 +541,12 @@ void LightFlowMod::OnCompositorRender(
 }
 
 bool LightFlowMod::ShouldForceMovie() const {
-  return !m_coreDisabled &&
-         m_capturing &&
-         m_forceMovie &&
-         !m_screenshotPendingThisFrame;
+  return !m_coreDisabled && m_capturing && !m_screenshotPendingThisFrame;
 }
 
 // ---------------------------------------------------------------------------
 // SystemIO::IsCapturingMovie hooks
 // ---------------------------------------------------------------------------
-
-bool LightFlowMod::EnsureMovieHook(void *compositor) {
-  if (m_movieHookInstalled)
-    return true;
-  if (m_coreDisabled)
-    return false;
-
-  void *systemIO = FrameGrabber::GetSystemIO(compositor, *m_compositorLayout);
-  if (!systemIO) {
-    DisableCore("SystemIO is unavailable; recording has been disabled.");
-    return false;
-  }
-
-  auto *object = reinterpret_cast<SystemIO *>(systemIO);
-
-  auto &vf0 = METABINARY_FN(SystemIO, IsCapturingMovie, 0);
-  if (!vf0.Function().IsValid())
-    vf0.Cache(object);
-  if (!vf0.Function().IsValid()) {
-    DisableCore(
-      "SystemIO::IsCapturingMovie could not be resolved; recording has been "
-      "disabled.");
-    return false;
-  }
-  if (!vf0.Function().IsHookEnabled() && !vf0.Hook()) {
-    DisableCore(
-      "SystemIO::IsCapturingMovie could not be hooked; recording has been "
-      "disabled.");
-    return false;
-  }
-
-  // The NetEase client ORs two capture flags inside Compositor::Render().
-  // The TGC client only consults one.
-  if (m_profile == GameProfile::kNetEase) {
-    auto &vf1 = METABINARY_FN(SystemIO, IsCapturingMovieCC, 0);
-    if (!vf1.Function().IsValid())
-      vf1.Cache(object);
-    // Both slots may resolve to the same implementation in some builds;
-    // hooking the same address twice would chain two detours.
-    if (vf1.Function().IsValid() &&
-        vf1.Function().Address() != vf0.Function().Address() &&
-        !vf1.Function().IsHookEnabled()) {
-      if (!vf1.Hook()) {
-        DisableCore(
-          "SystemIO::IsCapturingMovieCC could not be hooked; recording has "
-          "been disabled.");
-        return false;
-      }
-    }
-  }
-
-  m_movieHookInstalled = true;
-
-  LOG(
-    "Hooked SystemIO::IsCapturingMovie[0] at %p",
-    reinterpret_cast<void *>(vf0.Function().Address()));
-  return true;
-}
 
 void LightFlowMod::DisableCore(cstring reason) {
   if (m_coreDisabled)
@@ -634,20 +563,6 @@ void LightFlowMod::DisableCore(cstring reason) {
     m_stopWorker = true;
     m_queueCondition.notify_all();
   }
-}
-
-void LightFlowMod::RemoveMovieHook() {
-  if (!m_movieHookInstalled)
-    return;
-  m_movieHookInstalled = false;
-
-  auto &vf0 = METABINARY_FN(SystemIO, IsCapturingMovie, 0);
-  if (vf0.Function().IsHookEnabled())
-    vf0.Unhook();
-
-  auto &vf1 = METABINARY_FN(SystemIO, IsCapturingMovieCC, 0);
-  if (vf1.Function().IsHookEnabled())
-    vf1.Unhook();
 }
 
 // ---------------------------------------------------------------------------

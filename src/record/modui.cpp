@@ -60,7 +60,7 @@ void LightFlowUi::m_DrawOverlay(LightFlowMod *mod) {
   ImGui::SetNextWindowBgAlpha(0.55f);
 
   ImGuiWindowFlags flags =
-    ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
+    ImGuiWindowFlags_NoDecoration| ImGuiWindowFlags_NoInputs |
     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
     ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysAutoResize;
 
@@ -68,11 +68,11 @@ void LightFlowUi::m_DrawOverlay(LightFlowMod *mod) {
     ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "REC");
     ImGui::SameLine();
     ImGui::Text(
-      "%02lld:%02lld   %llu frames   %llu dropped",
-      static_cast<long long>(seconds / 60),
-      static_cast<long long>(seconds % 60),
-      static_cast<unsigned long long>(captured),
-      static_cast<unsigned long long>(dropped));
+      "%02lld:%02lld F%llu D%llu",
+      static_cast<i64>(seconds / 60),
+      static_cast<i64>(seconds % 60),
+      static_cast<u64>(captured),
+      static_cast<u64>(dropped));
   }
   ImGui::End();
   ImGui::PopID();
@@ -80,7 +80,7 @@ void LightFlowUi::m_DrawOverlay(LightFlowMod *mod) {
 
 void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
   static const char *kCodecs[] = {
-    "libx264", "h264_mf", "libopenh264", "mpeg4"
+    "libx264", "h264_mf", "libopenh264", "mpeg4", "h264_nvenc", "hevc_nvenc"
   };
 
   bool open = m_menuOpen;
@@ -152,13 +152,6 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
       queueSize = std::min(16, std::max(1, queueSize));
       mod->m_queueLimit = queueSize;
       mod->m_settings.queueSize = queueSize;
-      mod->MarkSettingsDirty();
-    }
-
-    bool forceMovie = mod->m_forceMovie;
-    if (ImGui::Checkbox("Force movie capture mode", &forceMovie)) {
-      mod->m_forceMovie = forceMovie;
-      mod->m_settings.forceMovieMode = forceMovie;
       mod->MarkSettingsDirty();
     }
 

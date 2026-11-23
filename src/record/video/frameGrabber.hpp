@@ -7,7 +7,7 @@
 #include "utils/types.hpp"
 #include "skylink/skyCompositor.hpp"
 #include "skylink/skyRenderer.hpp"
-#include "record/sourcePixelFormat.hpp"
+#include "record/video/sourcePixelFormat.hpp"
 
 // Reads the rtScreenshot render target. The render target table is learned by
 // hooking FindRenderTarget(), so no Compositor field offsets are needed; only
@@ -15,14 +15,6 @@
 class FrameGrabber {
 public:
   FrameGrabber() = default;
-
-  inline void SetLayout(
-    const RendererLayout *rendererLayout,
-    const RenderTargetLayout *renderTargetLayout
-  ) {
-    m_rendererLayout = rendererLayout;
-    m_renderTargetLayout = renderTargetLayout;
-  }
 
   // Supplied by the FindRenderTarget() detour whenever it successfully looks up
   // "rtScreenshot".
@@ -50,23 +42,16 @@ public:
     // LOG("Cached RenderTarget(s): 0x%p", m_targets);
   }
 
-  // Resolve the SystemIO object owned by the compositor.
-  static void *GetSystemIO(
-    void *compositor,
-    const CompositorLayout &layout
-  );
-
   // Read the current rtScreenshot pixels into `out`. `frameIndex` must be the
   // compositor's frame counter as it was before the render call (the render
   // graph uses it to select the ping-pong texture).
   bool Grab(
     u32 frameIndex,
-    std::vector<u08> &out,
-    i32 &width,
-    i32 &height,
-    SourcePixelFormat &pixelFormat,
-    u32 &gfxFormat,
-    u32 &vkFormat
+    std::vector<u08> *out,
+    i32 *width,
+    i32 *height,
+    SourcePixelFormat *pixelFormat,
+    GfxTexelFormat *texelFormat
   );
 
   const std::string &LastError() const { return m_lastError; }
@@ -79,8 +64,6 @@ private:
   bool m_isRenderTargetSet = false;
   const RenderOutline *m_renderOutline = nullptr;
   const RenderTarget *m_targets = nullptr;
-  const RendererLayout *m_rendererLayout = nullptr;
-  const RenderTargetLayout *m_renderTargetLayout = nullptr;
   std::string m_lastError;
 };
 

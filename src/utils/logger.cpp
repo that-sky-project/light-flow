@@ -52,12 +52,14 @@ void Logger::Logv(
     return;
   } else if (n < static_cast<int>(sizeof(stackBuf))) {
     m_fstream.write(stackBuf, n);
-    m_fstream << '\n';
+    if (stackBuf[strlen(stackBuf) - 1] != '\n')
+      m_fstream << '\n';
   } else {
     std::vector<char> buf(static_cast<size_t>(n) + 1);
     vsnprintf(buf.data(), buf.size(), format, va);
     m_fstream.write(buf.data(), n);
-    m_fstream << '\n';
+    if (buf[buf.size() - 1] != '\n')
+      m_fstream << '\n';
   }
   m_fstream.flush();
 }

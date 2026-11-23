@@ -18,12 +18,13 @@
     <ClInclude Include="..\src\metabinary\binaryDescPatternMatch.hpp" />
     <ClInclude Include="..\src\metabinary\binaryDescriptor.hpp" />
     <ClInclude Include="..\src\metabinary\metabinary.hpp" />
-    <ClInclude Include="..\src\record\frameGrabber.hpp" />
+    <ClInclude Include="..\src\record\hook.hpp" />
     <ClInclude Include="..\src\record\lightflow.hpp" />
     <ClInclude Include="..\src\record\modSettings.hpp" />
     <ClInclude Include="..\src\record\modui.hpp" />
-    <ClInclude Include="..\src\record\sourcePixelFormat.hpp" />
-    <ClInclude Include="..\src\record\videoEncoder.hpp" />
+    <ClInclude Include="..\src\record\video\frameGrabber.hpp" />
+    <ClInclude Include="..\src\record\video\sourcePixelFormat.hpp" />
+    <ClInclude Include="..\src\record\video\videoEncoder.hpp" />
     <ClInclude Include="..\src\skylink\skyCompositor.hpp" />
     <ClInclude Include="..\src\skylink\skyGfx.hpp" />
     <ClInclude Include="..\src\skylink\skyRenderer.hpp" />
@@ -52,12 +53,13 @@
     <ClCompile Include="..\src\metabinary\binaryDescriptor.cpp" />
     <ClCompile Include="..\src\metabinary\metabinary.cpp" />
     <ClCompile Include="..\src\mod.cpp" />
-    <ClCompile Include="..\src\record\frameGrabber.cpp" />
     <ClCompile Include="..\src\record\hook.cpp" />
     <ClCompile Include="..\src\record\lightflow.cpp" />
     <ClCompile Include="..\src\record\modSettings.cpp" />
     <ClCompile Include="..\src\record\modui.cpp" />
-    <ClCompile Include="..\src\record\videoEncoder.cpp" />
+    <ClCompile Include="..\src\record\video\frameGrabber.cpp" />
+    <ClCompile Include="..\src\record\video\videoEncoder.cpp" />
+    <ClCompile Include="..\src\skylink\link\skyRenderer.cpp" />
     <ClCompile Include="..\src\utils\archUtils.cpp" />
     <ClCompile Include="..\src\utils\assert.cpp" />
     <ClCompile Include="..\src\utils\fsUtils.cpp" />
@@ -123,11 +125,11 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="CopyRuntimeFiles" AfterTargets="Build">
     <ItemGroup>
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avutil-61.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swresample-7.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swscale-10.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avcodec-63.dll" />
-      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avformat-63.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avutil-59.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swresample-5.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\swscale-8.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avcodec-61.dll" />
+      <LightFlowRuntime Include="$(ProjectDir)..\libraries\ffmpeg\bin\avformat-61.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(LightFlowRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <MakeDir Directories="$(OutDir)Data\Manifests" />
