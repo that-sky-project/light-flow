@@ -21,9 +21,6 @@
 
 static LightFlowMod *g_lightFlow = nullptr;
 
-// Hooks referenced this variable.
-bool g_forceMovieThisRender = false;
-
 namespace {
 
 std::wstring TimestampName() {

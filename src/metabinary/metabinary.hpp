@@ -345,19 +345,20 @@ public:
 
   // User must call this function to cache the vftable of any object.
   template<typename Class>
-  inline void Cache(const Class *object) {
+  inline bool Cache(const Class *object) {
     static_assert(std::is_polymorphic<Class>::value,
       "MetaBinary: Object is not a polymorphic class.");
     if (!object)
-      return;
-    Cache(*reinterpret_cast<const uintptr_t *const *>(object));
+      return false;
+    return Cache(*reinterpret_cast<const uintptr_t *const *>(object));
   }
 
-  inline void Cache(const uintptr_t *vftable) {
+  inline bool Cache(const uintptr_t *vftable) {
     if (!vftable || m_vindex == -1)
-      return;
+      return false;
     m_cache = vftable;
     m_func.Initialize(vftable[m_vindex]);
+    return m_func.IsValid();
   }
 
   inline bool Hook() { return m_func.Hook(GetName()); }

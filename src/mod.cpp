@@ -67,13 +67,12 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
 
   av_log_set_level(AV_LOG_INFO);
   av_log_set_callback([](void *, int level, cstring fmt, va_list va) {
-    if (level > AV_LOG_INFO)
+    if (level > AV_LOG_VERBOSE)
       return;
     GetLogger()->Logv("[ffmpeg]", fmt, va);
   });
 
-  // 1. Ask the loader which edition is running. The same build of this mod
-  //    supports both Chinese (NetEase) and international (TGC) clients.
+  // 1. Ask the loader which edition is running.
   HTGameStatus status = {};
   HTGetGameStatus(&status);
 
@@ -94,8 +93,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
 
   LOG("Game edition: %s", GetGameProfileName(profile));
 
-  // 2. Load the descriptor list for this edition. BinaryDescriptorBarn picks
-  //    root[profile][arch], so one JSON keeps both builds side by side.
+  // 2. Load the descriptor list for this edition.
   TgcWString path = folder + L"\\Data\\Manifests\\BinaryDescriptor.json";
   TgcString json = FsUtils::ReadFileUtf8(path);
 
@@ -108,9 +106,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   binaryDescriptorBarn->Initialize(json.c_str(), GetGameProfileName(profile));
   LOG("Loaded BinaryDescriptor.json from disk - %llu bytes", json.length());
 
-  // 3. Resolve every METABINARY-declared link. A missing descriptor disables
-  //    the mod instead of leaving a half-linked function that could crash the
-  //    game later.
+  // 3. Resolve every METABINARY-declared link.
   auto *metaBinarySystem = new MetaBinarySystem();
   metaBinarySystem->Initialize(binaryDescriptorBarn);
   if (!metaBinarySystem->IsValid()) {
@@ -119,9 +115,7 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   }
   LOG("MetaBinarySystem initialized");
 
-  // 4. Bring up the recorder and hook Compositor::Render(). The hook passes
-  //    through to the original function at all times; capture is controlled by
-  //    the F8/F9 hotkeys and by g_forceMovieThisRender.
+  // 4. Bring up the recorder.
   auto *lightFlow = new LightFlowMod();
 
   if (!lightFlow->Initialize(hModuleDll, profile)) {

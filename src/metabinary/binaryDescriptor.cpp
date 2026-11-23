@@ -490,6 +490,10 @@ void BinaryDescriptorBarn::Initialize(
     // TODO(HTMonkeyG): Multi-thread evaluate.
     //BinaryDescriptor::s_EvaluateObject(m_descriptors[name]);
     desc.Evaluate();
+    if (desc.IsValid())
+      LOGI("[%s] evaluated as 0x%p", name, desc.GetResult());
+    else
+      LOGW("[%s] failed to evaluate", name);
   }
 }
 

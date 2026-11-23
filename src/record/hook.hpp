@@ -1,7 +1,7 @@
 #ifndef __RECORD_HOOK_HPP__
 #define __RECORD_HOOK_HPP__
 
-#include "skylink/skyCompositor.hpp"
+#include "skylink/skySystemIO.hpp"
 #include "record/lightflow.hpp"
 
 // ----------------------------------------------------------------------------
@@ -14,11 +14,9 @@ bool BaseHooks();
 
 bool LinkRenderer();
 
-bool LinkCompositor(
-  Compositor *compositor,
+bool LinkSystemIO(
+  SystemIO *compositor,
   GameProfile profile);
-
-void UnlinkCompositor();
 
 } // namespace Hook
 

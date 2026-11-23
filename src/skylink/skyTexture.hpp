@@ -23,7 +23,7 @@ struct Texture {
   TextureDescriptor m_descriptor;
   // INCOMPLETE
 
-  METABINARY_LINK_MFN(u32, Texture, GetReadableTexture, 0, (i32 index), (index))
+  METABINARY_LINK_MFN(i32, Texture, GetReadableTexture, 0, (i32 index), (index))
 };
 
 METABINARY_LINK_IMM(sizeof_Texture)

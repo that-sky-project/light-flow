@@ -4,6 +4,9 @@
 #include "skylink/skySystemIO.hpp"
 #include "record/hook.hpp"
 
+// Hooks referenced these variable.
+static bool g_forceMovieThisRender = false;
+
 // ----------------------------------------------------------------------------
 // [SECTION] Detours
 // ----------------------------------------------------------------------------
@@ -21,7 +24,7 @@ public:
     static bool s_first = true;
     static bool s_hooked = false;
     if (s_first) {
-      if (!Hook::LinkCompositor(this, mod->Profile()) || !Hook::LinkRenderer()) {
+      if (!Hook::LinkSystemIO(this->*Compositor::systemIO, mod->Profile()) || !Hook::LinkRenderer()) {
         LOGE("Failed to link SystemIO or Renderer");
         mod->Shutdown();
       } else
@@ -62,6 +65,14 @@ public:
       return true;
     return METABINARY_FN(SystemIO, IsCapturingMovieCC, 0).Call(this);
   }
+
+  bool IsLoggedIn() {
+    // There's only one xref of this function in Compositor::Render(), so the
+    // side effect wont be significant.
+    if (g_forceMovieThisRender)
+      return false;
+    return METABINARY_FN(SystemIO, IsLoggedIn, 0).Call(this);
+  }
 };
 
 // ----------------------------------------------------------------------------
@@ -79,6 +90,10 @@ METABINARY_HOOK_MFN(
 METABINARY_HOOK_MFN(
   SystemIO, IsCapturingMovieCC, 0,
   &HOOK_SystemIO::IsCapturingMovieCC
+)
+METABINARY_HOOK_MFN(
+  SystemIO, IsLoggedIn, 0,
+  &HOOK_SystemIO::IsLoggedIn
 )
 
 // FindRenderTarget() is called by the compositor with the render target table
@@ -100,98 +115,84 @@ METABINARY_HOOK_FN(
 // [SECTION] Hook Installer
 // ----------------------------------------------------------------------------
 
-namespace Hook {
-
-bool BaseHooks() {
-// Learn the compositor's render target table before anything needs it. A
-  // failure here means rtScreenshot can never be located, so disable the mod.
-  auto &findRenderTarget = METABINARY_FN(, FindRenderTarget, 0);
-  if (!findRenderTarget.Function().IsValid()) {
-    LOGE("FindRenderTarget is not linked.");
-    return false;
-  }
-  if (!findRenderTarget.Hook()) {
-    LOGE("Cannot hook FindRenderTarget.");
-    return false;
-  }
-  LOG("Hooked FindRenderTarget at %p",
-    reinterpret_cast<void *>(findRenderTarget.Function().Address()));
-
-  auto &render = METABINARY_FN(Compositor, Render, 0);
-  if (!render.Function().IsValid()) {
-    LOGE("Compositor::Render is not linked.");
+static bool s_TryHook(
+  MetaBinaryFunction &mbf
+) {
+  if (!mbf.IsInitialized() || !mbf.Function().IsValid()) {
+    LOGE("[%s] is invalid.", mbf.GetName());
     return false;
   }
 
-  if (!render.Hook()) {
-    LOGE("Cannot hook Compositor::Render.");
+  if (!mbf.Function().IsHookEnabled() && !mbf.Hook()) {
+    LOGE("[%s] could not be hooked.", mbf.GetName());
     return false;
   }
-  LOG("Hooked Compositor::Render at %p",
-    reinterpret_cast<void *>(render.Function().Address()));
+
+  LOGI("Hooked [%s] @ %p", mbf.GetName(), (void *)mbf.Function().Address());
 
   return true;
 }
 
-bool LinkCompositor(
-  Compositor *compositor,
+template<typename C>
+static bool s_TryHook(
+  MetaBinaryVirtualFunction &mbvf,
+  const C *obj
+) {
+  if (!mbvf.IsInitialized()) {
+    LOGE("[%s] is invalid.", mbvf.GetName());
+    return false;
+  }
+
+  if (!mbvf.Cache(obj)) {
+    LOGE("[%s] could not be resolved.", mbvf.GetName());
+    return false;
+  }
+
+  if (!mbvf.Function().IsHookEnabled() && !mbvf.Hook()) {
+    LOGE("[%s] could not be hooked.", mbvf.GetName());
+    return false;
+  }
+
+  LOGI("Hooked [%s] @ %p", mbvf.GetName(), (void *)mbvf.Function().Address());
+
+  return true;
+}
+
+namespace Hook {
+
+bool BaseHooks() {
+  // Learn the compositor's render target table before anything needs it. A
+  // failure here means rtScreenshot can never be located, so disable the mod.
+  if (!s_TryHook(METABINARY_FN(, FindRenderTarget, 0)))
+    return false;
+  if (!s_TryHook(METABINARY_FN(Compositor, Render, 0)))
+    return false;
+  return true;
+}
+
+bool LinkSystemIO(
+  SystemIO *systemIO,
   GameProfile profile
 ) {
-  SystemIO *systemIO = compositor->*Compositor::systemIO;
   if (!systemIO) {
     LOGE("SystemIO is unavailable.");
     return false;
   }
 
-  auto &vf0 = METABINARY_FN(SystemIO, IsCapturingMovie, 0);
-  if (!vf0.Function().IsValid())
-    // Try to cache vftable first.
-    vf0.Cache(systemIO);
-  if (!vf0.Function().IsValid()) {
-    // Report error if still failed.
-    LOGE("SystemIO::IsCapturingMovie could not be resolved.");
+  if (!s_TryHook(METABINARY_FN(SystemIO, IsCapturingMovie, 0), systemIO))
     return false;
-  }
-  if (!vf0.Function().IsHookEnabled() && !vf0.Hook()) {
-    LOGE("SystemIO::IsCapturingMovie could not be hooked.");
+
+  // The NetEase client needs much more functions....
+  if (profile != GameProfile::kNetEase)
+    return true;
+
+  if (!s_TryHook(METABINARY_FN(SystemIO, IsCapturingMovieCC, 0), systemIO))
     return false;
-  }
 
-  // The NetEase client ORs two capture flags inside Compositor::Render().
-  // The TGC client only consults one.
-  if (profile == GameProfile::kNetEase) {
-    auto &vf1 = METABINARY_FN(SystemIO, IsCapturingMovieCC, 0);
-    if (!vf1.Function().IsValid())
-      vf1.Cache(systemIO);
-    // Both slots may resolve to the same implementation in some builds;
-    // hooking the same address twice would chain two detours.
-    if (
-      vf1.Function().IsValid()
-      && vf1.Function().Address() != vf0.Function().Address()
-      && !vf1.Function().IsHookEnabled()
-    ) {
-      if (!vf1.Hook()) {
-        LOGE("SystemIO::IsCapturingMovieCC could not be hooked.");
-        return false;
-      }
-    }
-  }
+  if (!s_TryHook(METABINARY_FN(SystemIO, IsLoggedIn, 0), systemIO))
+    return false;
 
-  LOG(
-    "Hooked SystemIO::IsCapturingMovie[0] at %p",
-    reinterpret_cast<void *>(vf0.Function().Address())
-  );
   return true;
-}
-
-void UnlinkCompositor() {
-  auto &vf0 = METABINARY_FN(SystemIO, IsCapturingMovie, 0);
-  if (vf0.Function().IsHookEnabled())
-    vf0.Unhook();
-
-  auto &vf1 = METABINARY_FN(SystemIO, IsCapturingMovieCC, 0);
-  if (vf1.Function().IsHookEnabled())
-    vf1.Unhook();
 }
 
 bool LinkRenderer() {

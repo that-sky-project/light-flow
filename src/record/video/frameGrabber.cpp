@@ -42,7 +42,11 @@ bool FrameGrabber::Grab(
 
   // Pick one of the texture's readable slots. MetaBinary does not support const
   // member functions, so we use const_cast.
-  u32 slot = const_cast<Texture *>(texture)->GetReadableTexture(0);
+  i32 slot = const_cast<Texture *>(texture)->GetReadableTexture(0);
+  if (slot == -1) {
+    Fail("rtScreenshot texture handle invalid: %d", slot);
+    return false;
+  }
 
   Renderer *renderer = GetRenderer();
   if (!renderer) {

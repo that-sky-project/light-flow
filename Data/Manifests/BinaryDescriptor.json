@@ -1,3 +1,17 @@
+// ----------------------------------------------------------------------------
+// Notes:  Binary Descriptors of Light Flow
+//         Copyright (c) 2026 That Sky Project, HTMonkeyG
+//         MIT License
+//         https://github.com/that-sky-project/light-flow
+// 
+//         Contributors must mark the game version from which the descriptor
+//         originates, the game versions on which it is verified to work, and
+//         the date of verification. The source version must be marked with a
+//         "-" prefix.
+//
+// Author: HTMonkeyG
+// Date C: 2026-11-23
+// ----------------------------------------------------------------------------
 {
   "netease": {
     "x64": {
@@ -27,7 +41,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 66 90 49 89 C0",
             "match": "$@ + $0x00:0 + 0x05"
@@ -38,7 +52,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
             "pattern": "E8 ? ? ? ? 45 8B 44 BD",
             "match": "$@ + $0x00:0 + 0x05"
@@ -49,7 +63,7 @@
         "desc_type": "virtual_function",
         "sig": [
           {
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
             "pattern": "FF 90 ? ? ? ? 88 86 ? ? ? ? C6 86 ? ? ? ? 00",
             "match": "$0x0:0 / 8"
@@ -60,9 +74,13 @@
         "desc_type": "virtual_function",
         "sig": [
           {
-            // 0.16.5 2026.11.20
-            // 0.16.7 2026.11.21
+            // - 0.16.7 2026.11.21
             "pattern": "41 FF 92 ? ? ? ? 48 8B 4E ? 48 89 B1",
+            "match": "$0:0 / 8"
+          },
+          {
+            // - 0.16.5 2026.11.20
+            "pattern": "41 FF 92 ? ? ? ? 8B BD",
             "match": "$0:0 / 8"
           }
         ]
@@ -71,9 +89,20 @@
         "desc_type": "virtual_function",
         "sig": [
           {
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
+            // 0.16.8 2026.11.23
             "pattern": "FF 90 ? ? ? ? 89 C1 88 86",
+            "match": "$0:0 / 8"
+          }
+        ]
+      },
+      "SystemIO::IsLoggedIn$0": {
+        "desc_type": "virtual_function",
+        "sig": [
+          {
+            // - 0.16.8 2026.11.23
+            "pattern": "FF 90 ? ? ? ? 84 C0 0F 84 ? ? ? ? 48 C7 84 24 ? ? ? ? 00 00 00 00",
             "match": "$0:0 / 8"
           }
         ]
@@ -83,7 +112,7 @@
         "sig": [
           {
             // From Compositor::Render()
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
             "pattern": "48 8B 8E ? ? ? ? ? ? ? FF 90 ? ? ? ? 89 C1",
             "match": "$0:0"
@@ -95,7 +124,7 @@
         "sig": [
           {
             // From Compositor::Render()
-            // 0.16.5 2026.11.20
+            // - 0.16.5 2026.11.20
             // 0.16.7 2026.11.21
             "pattern": "66 C7 86 ? ? ? ? 00 00 83 BE ? ? ? ? 00 0F 85",
             "match": "$0:0"
@@ -104,10 +133,14 @@
       },
       "RenderTarget::textureCount": {
         "desc_type": "member_variable",
+        // - 0.16.5 2026.11.20
+        // 0.16.7 2026.11.21
         "desc_fallback": 264
       },
       "sizeof_Texture": {
         "desc_type": "constant",
+        // - 0.16.5 2026.11.20
+        // 0.16.7 2026.11.21
         "desc_fallback": 128
       }
     }
@@ -118,7 +151,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "E8 ? ? ? ? 48 8B 8E ? ? ? ? E8 ? ? ? ? 48 8B 8E ? ? ? ? 48 85 C9",
             "match": "$@ + $0x00:0 + 0x05"
@@ -129,7 +162,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "8B ? ? E8 ? ? ? ? 44 0F B6 46",
             "match": "$@ + 0x03 + $0x03:0 + 0x05"
@@ -140,7 +173,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "E8 ? ? ? ? 0F 1F 40 ? 48 89 C1",
             "match": "$@ + $0x00:0 + 0x05"
@@ -151,7 +184,7 @@
         "desc_type": "function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "E8 ? ? ? ? ? ? 0F B6 43 ? 24",
             "match": "$@ + $0x00:0 + 0x05"
@@ -162,7 +195,7 @@
         "desc_type": "virtual_function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "FF 90 ? ? ? ? 88 46",
             "match": "$0:0 / 8"
@@ -173,7 +206,7 @@
         "desc_type": "virtual_function",
         "sig": [
           {
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "41 FF 92 ? ? ? ? 48 8B 4E ? ? 89 ?",
             "match": "$0:0 / 8"
@@ -185,12 +218,17 @@
         // UNUSED
         "desc_fallback": 0
       },
+      "SystemIO::IsLoggedIn$0": {
+        "desc_type": "virtual_function",
+        // UNUSED
+        "desc_fallback": 0
+      },
       "Compositor::systemIO": {
         "desc_type": "member_variable",
         "sig": [
           {
             // From Compositor::Render()
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "48 8B 8E ? ? ? ? ? ? ? FF 90 ? ? ? ? 88 46",
             "match": "$0:0"
@@ -202,7 +240,7 @@
         "sig": [
           {
             // From Compositor::Render()
-            // 0.32.2 2026.11.20
+            // - 0.32.2 2026.11.20
             // 0.35.2 2026.11.21
             "pattern": "66 C7 46 ? 00 00 C7 86 ? ? ? ? 00 00 00 00",
             "match": "$0:0"

@@ -178,11 +178,6 @@ private:
 
 extern LightFlowMod *g_lightFlow;
 
-// Set only while the hooked Compositor::Render() is running. The
-// SystemIO::IsCapturingMovie detours consult this flag, so the rest of the
-// game (main loop, platform integration, input) still sees the real value.
-extern bool g_forceMovieThisRender;
-
 LightFlowMod *GetLightFlowMod();
 
 #endif
