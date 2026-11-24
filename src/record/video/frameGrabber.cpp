@@ -81,9 +81,16 @@ bool FrameGrabber::Grab(
   out->resize(frameBytes);
 
   //auto start = std::chrono::steady_clock::now();
+
   // Wait for the GPU: pass waitForGpu = 1 so the frame that this render just
   // submitted is fully visible before the CPU copies it out.
+  //
+  // NOTE(HTMonkeyG): This function has a performance cost: when waitForGpu = 1,
+  // the call takes an average of 7 ms; when waitForGpu = 0, it takes an average
+  // of 3 ms. Therefore, move it to a worker thread to prevent blocking the main
+  // thread and causing a drop in game frame rate.
   renderer->GetPixels(slot, out->data(), static_cast<i64>(rowBytes), 0);
+
   //auto end = std::chrono::steady_clock::now();
   //auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
   //LOGI("GetPixels last for %llu", elapsed.count());
