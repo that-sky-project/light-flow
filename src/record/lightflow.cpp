@@ -100,10 +100,8 @@ bool LightFlowMod::Initialize(HMODULE module, GameProfile profile) {
   else
     LOGW("Cannot register the F9 hotkey");
 
-  LOG(
-    "LightFlowMod initialized (%s edition). Mod folder: %s",
-    GetGameProfileName(profile),
-    Utf8Utils::ToUtf8(m_modFolder).c_str());
+  LOG("LightFlowMod initialized (%s edition).", GetGameProfileName(profile));
+  LOG("Mod folder: %s", Utf8Utils::ToUtf8(m_modFolder).c_str());
 
   SetStatus("Ready. F8 opens the panel, F9 starts/stops recording.");
   return true;

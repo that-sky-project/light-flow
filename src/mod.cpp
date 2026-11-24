@@ -62,14 +62,14 @@ __declspec(dllexport) HTStatus HTMLAPI HTModOnInit(void *) {
   LOG("------------------------------------------------------------");
 
   SetAssertHandler([](cstring expr, cstring msg, cstring file, u32 line, u32) {
-    LOGW("Assertion failed at %s (%u): %s (%s)", file, line, expr, msg);
+    LOGE("Assertion failed at %s (%u): %s (%s)", file, line, expr, msg);
   });
 
   av_log_set_level(AV_LOG_INFO);
   av_log_set_callback([](void *, int level, cstring fmt, va_list va) {
     if (level > AV_LOG_VERBOSE)
       return;
-    GetLogger()->Logv("[ffmpeg]", fmt, va);
+    GetLogger()->Logv(Logger::kLevel_Info, "[ffmpeg]", fmt, va);
   });
 
   // 1. Ask the loader which edition is running.

@@ -21,26 +21,36 @@ void Logger::Terminate() {
 }
 
 void Logger::Log(
+  i32 level,
   cstring tag,
   cstring format,
   ...
 ) {
   va_list va;
   va_start(va, format);
-  Logv(tag, format, va);
+  Logv(level, tag, format, va);
   va_end(va);
 }
 
 void Logger::Logv(
+  i32 level,
   cstring tag,
   cstring format,
   va_list va
 ) {
   if (!format) return;
+  if (level < m_level) return;
+  if (level < kLevel_Verbose) level = kLevel_Verbose;
+  if (level > kLevel_Error) level = kLevel_Error;
 
   std::lock_guard<std::mutex> lock(m_mutex);
   if (!m_fstream.is_open()) return;
   if (tag) m_fstream << tag << " ";
+
+  static constexpr cstring kLevelNames[] = {
+    "[I] ", "", "[W] ", "[E] "
+  };
+  m_fstream << kLevelNames[level];
 
   char stackBuf[512];
   va_list vacopy;
