@@ -33,9 +33,15 @@ bool FrameGrabber::Grab(
   SourcePixelFormat *pixelFormat,
   GfxTexelFormat *texelFormat
 ) {
+  const RenderOutline *renderOutline = m_renderOutline.load();
+  if (!renderOutline) {
+    Fail("render target table is not available yet");
+    return false;
+  }
+
   const Texture *texture = FindRenderTargetTexture(
-    *m_renderOutline,
-    m_targets,
+    *renderOutline,
+    m_targets.load(),
     "rtScreenshot",
     frameIndex
   );
@@ -74,9 +80,13 @@ bool FrameGrabber::Grab(
 
   out->resize(frameBytes);
 
+  //auto start = std::chrono::steady_clock::now();
   // Wait for the GPU: pass waitForGpu = 1 so the frame that this render just
   // submitted is fully visible before the CPU copies it out.
-  renderer->GetPixels(slot, out->data(), static_cast<i64>(rowBytes), 1);
+  renderer->GetPixels(slot, out->data(), static_cast<i64>(rowBytes), 0);
+  //auto end = std::chrono::steady_clock::now();
+  //auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+  //LOGI("GetPixels last for %llu", elapsed.count());
 
   *pixelFormat = logical.pixelFormat;
   m_lastError.clear();

@@ -43,9 +43,11 @@ inline const CompositorLayout &GetCompositorLayout(GameProfile profile) {
 
 // Threading model: the game core is single threaded. HTModRenderGui(), the
 // hotkey callbacks and the Compositor::Render hook all run on that one thread,
-// so the state they share needs no atomics. Only the video encoder worker runs
-// on a separate thread; the members it touches stay atomic, and the frame queue
-// stays mutex protected.
+// so the state they share needs no atomics. Only two helper threads run beside
+// it: the grab worker, which reads rtScreenshot so the GPU readback does not
+// stall rendering, and the video encoder worker. The grab worker hands frames
+// to the encoder through m_queue; the state both threads touch is atomic or
+// guarded by m_queueMutex / m_grabMutex.
 class LightFlowMod {
 public:
   LightFlowMod() = default;
@@ -93,10 +95,23 @@ private:
     i64 ptsMs = 0;
   };
 
+  // What the render thread asks the grab worker to read. Only one request is
+  // kept: if the worker is still busy, the newer frame replaces the stale one
+  // (an old frame index may point at a texture slot the game is about to
+  // reuse).
+  struct GrabRequest {
+    u32 frameIndex = 0;
+    i64 ptsMs = 0;
+    bool swapRedBlue = false;
+  };
+
   void Update();
   void StartCapture();
   void StopCapture(bool join);
   void ToggleCapture();
+  void RequestGrab(u32 frameIndex, i64 ptsMs, bool swapRedBlue);
+  void GrabberLoop();
+  void GrabFrame(const GrabRequest &request);
   void WorkerLoop();
   void ReapWorker();
 
@@ -129,12 +144,22 @@ private:
   bool m_showOverlay = true;
   bool m_swapRedBlue = false;
   i32 m_targetFps = 30;
-  i32 m_queueLimit = 4;
+  std::atomic<i32> m_queueLimit{4};
   bool m_screenshotPendingThisFrame = false;
   u32 m_frameIndex = 0;
 
-  // Capture session. The encoder worker is the only other thread; everything
-  // it touches is atomic or guarded by m_queueMutex.
+  // Capture session. Two helper threads run beside the game thread: the grab
+  // worker and the encoder worker. Everything they share is atomic or guarded
+  // by m_queueMutex / m_grabMutex.
+  std::atomic<std::thread::id> m_grabThreadId{};
+  std::thread m_grabWorker;
+  std::mutex m_grabMutex;
+  std::condition_variable m_grabCondition;
+  GrabRequest m_grabRequest;
+  bool m_grabPending = false;
+  std::atomic<bool> m_stopGrabber{false};
+  std::atomic<bool> m_grabWorkerDone{true};
+
   std::thread m_worker;
   std::mutex m_queueMutex;
   std::condition_variable m_queueCondition;
@@ -146,8 +171,8 @@ private:
   std::atomic<u64> m_encodedFrames{0};
   std::atomic<i32> m_encoderWidth{0};
   std::atomic<i32> m_encoderHeight{0};
-  u64 m_capturedFrames = 0;
-  u64 m_droppedFrames = 0;
+  std::atomic<u64> m_capturedFrames{0};
+  std::atomic<u64> m_droppedFrames{0};
 
   std::string m_activeOutput;
   std::string m_activeCodec;

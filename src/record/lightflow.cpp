@@ -228,12 +228,28 @@ void LightFlowMod::StartCapture() {
   m_targetFps = m_settings.targetFps;
   m_queueLimit = std::max(1, m_settings.queueSize);
 
-  // Finish any previous worker before resetting the stop flag, otherwise the
+  // Finish any previous workers before resetting the stop flags, otherwise an
   // old worker could observe m_stopWorker == false and never exit.
-  if (m_worker.joinable()) {
-    m_stopWorker = true;
+  if (m_grabWorker.joinable() || m_worker.joinable()) {
+    {
+      std::lock_guard<std::mutex> lock(m_grabMutex);
+      m_stopGrabber = true;
+    }
+    {
+      std::lock_guard<std::mutex> lock(m_queueMutex);
+      m_stopWorker = true;
+    }
+    m_grabCondition.notify_all();
     m_queueCondition.notify_all();
-    m_worker.join();
+    if (m_grabWorker.joinable())
+      m_grabWorker.join();
+    if (m_worker.joinable())
+      m_worker.join();
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(m_grabMutex);
+    m_grabPending = false;
   }
 
   {
@@ -242,6 +258,8 @@ void LightFlowMod::StartCapture() {
     m_freeBuffers.clear();
   }
 
+  m_stopGrabber = false;
+  m_grabWorkerDone = false;
   m_stopWorker = false;
   m_workerDone = false;
   m_failed = false;
@@ -256,6 +274,7 @@ void LightFlowMod::StartCapture() {
   m_startTime = std::chrono::steady_clock::now();
   m_lastGrabTime = m_startTime - std::chrono::seconds(1);
   m_worker = std::thread(&LightFlowMod::WorkerLoop, this);
+  m_grabWorker = std::thread(&LightFlowMod::GrabberLoop, this);
 
   SetStatus("Starting capture -> %s", output.c_str());
   LOG("Starting capture -> %s", output.c_str());
@@ -265,13 +284,30 @@ void LightFlowMod::StopCapture(bool join) {
   bool wasCapturing = m_capturing;
   m_capturing = false;
 
-  m_stopWorker = true;
+  // The stop flags are part of the workers' wait predicates, so they must be
+  // stored under the matching mutex; otherwise a worker that is between its
+  // predicate check and its wait could miss the notification and hang.
+  {
+    std::lock_guard<std::mutex> lock(m_grabMutex);
+    m_stopGrabber = true;
+  }
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_stopWorker = true;
+  }
+  m_grabCondition.notify_all();
   m_queueCondition.notify_all();
 
   if (wasCapturing)
     SetStatus("Stopping capture...");
 
   if (join) {
+    // Join the grab worker first so no more frames can enter the queue while
+    // the encoder drains the remaining ones.
+    if (m_grabWorker.joinable())
+      m_grabWorker.join();
+    m_grabWorkerDone = true;
+
     if (m_worker.joinable())
       m_worker.join();
     m_workerDone = true;
@@ -279,6 +315,9 @@ void LightFlowMod::StopCapture(bool join) {
 }
 
 void LightFlowMod::ReapWorker() {
+  if (m_grabWorker.joinable() && m_grabWorkerDone.load())
+    m_grabWorker.join();
+
   if (m_worker.joinable() && m_workerDone.load()) {
     m_worker.join();
     if (m_failed.load()) {
@@ -291,6 +330,127 @@ void LightFlowMod::ReapWorker() {
         static_cast<unsigned long long>(m_encodedFrames.load()));
     }
   }
+}
+
+// Runs on the render thread. Only the request is recorded here: the actual
+// rtScreenshot read (a GPU synchronise plus a full-frame copy) is performed by
+// GrabberLoop() so this thread can carry on with the next frame.
+void LightFlowMod::RequestGrab(u32 frameIndex, i64 ptsMs, bool swapRedBlue) {
+  {
+    std::lock_guard<std::mutex> lock(m_grabMutex);
+    // The worker cannot keep up with this frame; replacing the stale request
+    // is safer than reading a texture slot the game may already have reused.
+    if (m_grabPending)
+      m_droppedFrames++;
+    m_grabRequest.frameIndex = frameIndex;
+    m_grabRequest.ptsMs = ptsMs;
+    m_grabRequest.swapRedBlue = swapRedBlue;
+    m_grabPending = true;
+  }
+
+  m_grabCondition.notify_one();
+}
+
+void LightFlowMod::GrabberLoop() {
+  // FrameGrabber calls the hooked FindRenderTarget() from this thread. Record
+  // the id so the hook can tell those calls apart from the game's own.
+  m_grabThreadId = std::this_thread::get_id();
+
+  while (true) {
+    GrabRequest request;
+    {
+      std::unique_lock<std::mutex> lock(m_grabMutex);
+      m_grabCondition.wait(lock, [this] {
+        return m_stopGrabber.load() || m_grabPending;
+      });
+
+      if (m_stopGrabber.load())
+        break;
+
+      request = m_grabRequest;
+      m_grabPending = false;
+    }
+
+    GrabFrame(request);
+  }
+
+  // Let the encoder worker know that no further frames will be queued. The
+  // flag is part of its wait predicate, so store it under the queue mutex.
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_grabWorkerDone = true;
+  }
+  m_queueCondition.notify_all();
+}
+
+void LightFlowMod::GrabFrame(const GrabRequest &request) {
+  if (m_failed.load())
+    return;
+
+  std::vector<u08> buffer;
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    if (!m_freeBuffers.empty()) {
+      buffer = std::move(m_freeBuffers.back());
+      m_freeBuffers.pop_back();
+    }
+  }
+
+  i32 width = 0;
+  i32 height = 0;
+  SourcePixelFormat pixelFormat = kSourcePixelFormat_Unknown;
+  GfxTexelFormat gfxFormat = kGfxTexelFormat_Undefined;
+
+  if (!m_grabber.Grab(
+    request.frameIndex,
+    &buffer,
+    &width,
+    &height,
+    &pixelFormat,
+    &gfxFormat
+  )) {
+    u64 elapsedMs = static_cast<u64>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - m_startTime).count());
+
+    if (m_lastGrabFailLogMs == 0 ||
+        elapsedMs - m_lastGrabFailLogMs > 2000) {
+      m_lastGrabFailLogMs = elapsedMs;
+      SetStatus("Waiting for rtScreenshot: %s", m_grabber.LastError().c_str());
+    }
+
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_freeBuffers.push_back(std::move(buffer));
+    return;
+  }
+
+  // Optional user correction for builds/shaders that store the red and blue
+  // channels the other way around.
+  if (request.swapRedBlue)
+    pixelFormat = SwapRedBlue(pixelFormat);
+
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+
+    if (m_failed.load() ||
+        static_cast<i32>(m_queue.size()) >= m_queueLimit.load()) {
+      m_droppedFrames++;
+      m_freeBuffers.push_back(std::move(buffer));
+      return;
+    }
+
+    QueuedFrame frame;
+    frame.pixels = std::move(buffer);
+    frame.width = width;
+    frame.height = height;
+    frame.format = pixelFormat;
+    frame.ptsMs = request.ptsMs;
+
+    m_queue.push_back(std::move(frame));
+    m_capturedFrames++;
+  }
+
+  m_queueCondition.notify_one();
 }
 
 void LightFlowMod::WorkerLoop() {
@@ -313,7 +473,10 @@ void LightFlowMod::WorkerLoop() {
     {
       std::unique_lock<std::mutex> lock(m_queueMutex);
       m_queueCondition.wait(lock, [this] {
-        return m_stopWorker.load() || !m_queue.empty();
+        // Drain everything the grab worker managed to queue before exiting on
+        // a normal stop.
+        return !m_queue.empty() ||
+          (m_stopWorker.load() && m_grabWorkerDone.load());
       });
 
       if (m_queue.empty()) {
@@ -374,6 +537,13 @@ void LightFlowMod::WorkerLoop() {
     }
 
     if (m_failed.load()) {
+      // Stop the grab worker as well; it may be blocked on a pending request.
+      {
+        std::lock_guard<std::mutex> lock(m_grabMutex);
+        m_stopGrabber = true;
+      }
+      m_grabCondition.notify_all();
+
       std::lock_guard<std::mutex> lock(m_queueMutex);
       for (QueuedFrame &queued : m_queue) {
         m_freeBuffers.push_back(std::move(queued.pixels));
@@ -382,7 +552,7 @@ void LightFlowMod::WorkerLoop() {
       break;
     }
 
-    if (m_stopWorker.load() && m_queue.empty())
+    if (m_stopWorker.load() && m_grabWorkerDone.load() && m_queue.empty())
       break;
   }
 
@@ -414,7 +584,13 @@ void LightFlowMod::OnRenderTargetsFound(
   const RenderOutline *renderOutline,
   const RenderTarget *targets
 ) {
-  // FrameGrabber ensures that RenderOutline is set only once.
+  // The grab worker reaches this hook too: FrameGrabber calls FindRenderTarget
+  // to walk the table it already cached. Only the game's own call carries a
+  // fresh table, and letting the worker write its (possibly stale) copy back
+  // would race with the game's resize-time updates.
+  if (std::this_thread::get_id() == m_grabThreadId.load())
+    return;
+
   m_grabber.SetRenderTargets(renderOutline, targets);
 }
 
@@ -453,73 +629,13 @@ void LightFlowMod::OnCompositorRender(
   }
   m_lastGrabTime = now;
 
-  std::vector<u08> buffer;
-  {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    if (!m_freeBuffers.empty()) {
-      buffer = std::move(m_freeBuffers.back());
-      m_freeBuffers.pop_back();
-    }
-  }
-
-  i32 width = 0;
-  i32 height = 0;
-  SourcePixelFormat pixelFormat = kSourcePixelFormat_Unknown;
-  GfxTexelFormat gfxFormat = kGfxTexelFormat_Undefined;
-
-  if (!m_grabber.Grab(
-    m_frameIndex,
-    &buffer,
-    &width,
-    &height,
-    &pixelFormat,
-    &gfxFormat
-  )) {
-    u64 elapsedMs = static_cast<u64>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-        now - m_startTime).count());
-
-    if (m_lastGrabFailLogMs == 0 ||
-        elapsedMs - m_lastGrabFailLogMs > 2000) {
-      m_lastGrabFailLogMs = elapsedMs;
-      SetStatus("Waiting for rtScreenshot: %s", m_grabber.LastError().c_str());
-    }
-
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    m_freeBuffers.push_back(std::move(buffer));
-    return;
-  }
-
-  // Optional user correction for builds/shaders that store the red and blue
-  // channels the other way around.
-  if (m_swapRedBlue)
-    pixelFormat = SwapRedBlue(pixelFormat);
-
   i64 ptsMs = std::chrono::duration_cast<std::chrono::milliseconds>(
     now - m_startTime).count();
 
-  {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-
-    if (m_failed.load() ||
-        static_cast<i32>(m_queue.size()) >= m_queueLimit) {
-      m_droppedFrames++;
-      m_freeBuffers.push_back(std::move(buffer));
-      return;
-    }
-
-    QueuedFrame frame;
-    frame.pixels = std::move(buffer);
-    frame.width = width;
-    frame.height = height;
-    frame.format = pixelFormat;
-    frame.ptsMs = ptsMs;
-
-    m_queue.push_back(std::move(frame));
-    m_capturedFrames++;
-  }
-
-  m_queueCondition.notify_one();
+  // Hand the readback to the grab worker. FrameGrabber touches the renderer
+  // and the GPU, which can take milliseconds; doing it here would stall the
+  // render thread.
+  RequestGrab(m_frameIndex, ptsMs, m_swapRedBlue);
 }
 
 bool LightFlowMod::ShouldForceMovie() const {
@@ -538,11 +654,19 @@ void LightFlowMod::DisableCore(cstring reason) {
   LOGE("%s", reason);
   SetStatus("Disabled: %s", reason);
 
-  // Stop the capture without joining the encoder thread from the render
-  // thread; ReapWorker() will join it on the next UI frame.
+  // Stop the capture without joining the helper threads from the render
+  // thread; ReapWorker() will join them on the next UI frame.
   if (m_capturing) {
     m_capturing = false;
-    m_stopWorker = true;
+    {
+      std::lock_guard<std::mutex> lock(m_grabMutex);
+      m_stopGrabber = true;
+    }
+    {
+      std::lock_guard<std::mutex> lock(m_queueMutex);
+      m_stopWorker = true;
+    }
+    m_grabCondition.notify_all();
     m_queueCondition.notify_all();
   }
 }
