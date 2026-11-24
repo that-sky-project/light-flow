@@ -466,7 +466,6 @@ void LightFlowMod::OnCompositorRender(
   i32 height = 0;
   SourcePixelFormat pixelFormat = kSourcePixelFormat_Unknown;
   GfxTexelFormat gfxFormat = kGfxTexelFormat_Undefined;
-  u32 vkFormat = 0;
 
   if (!m_grabber.Grab(
     m_frameIndex,
@@ -495,23 +494,6 @@ void LightFlowMod::OnCompositorRender(
   // channels the other way around.
   if (m_swapRedBlue)
     pixelFormat = SwapRedBlue(pixelFormat);
-
-  {
-    static bool loggedFormat = false;
-    if (!loggedFormat) {
-      loggedFormat = true;
-      LOG(
-        "rtScreenshot: logical=%u VkFormat=%u %dx%d movie=%d swap=%d -> "
-        "source format %d",
-        gfxFormat,
-        vkFormat,
-        width,
-        height,
-        movieMode ? 1 : 0,
-        m_swapRedBlue ? 1 : 0,
-        static_cast<int>(pixelFormat));
-    }
-  }
 
   i64 ptsMs = std::chrono::duration_cast<std::chrono::milliseconds>(
     now - m_startTime).count();
