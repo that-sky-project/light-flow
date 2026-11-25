@@ -48,8 +48,8 @@ void LightFlowUi::m_DrawOverlay(LightFlowMod *mod) {
   if (!mod->m_capturing || !mod->m_showOverlay)
     return;
 
-  u64 captured = mod->m_capturedFrames;
-  u64 dropped = mod->m_droppedFrames;
+  u64 captured = mod->m_capturedFrames.load();
+  u64 dropped = mod->m_droppedFrames.load();
 
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   i64 seconds = std::chrono::duration_cast<std::chrono::seconds>(
@@ -204,10 +204,10 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
         mod->m_encoderHeight.load());
       ImGui::Text(
         "Captured: %llu   Encoded: %llu   Dropped: %llu",
-        static_cast<unsigned long long>(mod->m_capturedFrames),
+        static_cast<unsigned long long>(mod->m_capturedFrames.load()),
         static_cast<unsigned long long>(mod->m_encodedFrames.load()),
-        static_cast<unsigned long long>(mod->m_droppedFrames));
-      ImGui::Text("Queue: %d / %d", queued, mod->m_queueLimit);
+        static_cast<unsigned long long>(mod->m_droppedFrames.load()));
+      ImGui::Text("Queue: %d / %d", queued, mod->m_queueLimit.load());
       ImGui::Text(
         "Elapsed: %02lld:%02lld",
         static_cast<long long>(seconds / 60),

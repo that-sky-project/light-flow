@@ -1,6 +1,7 @@
 #ifndef __RECORD_FRAMEGRABBER_HPP__
 #define __RECORD_FRAMEGRABBER_HPP__
 
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,10 @@
 // Reads the rtScreenshot render target. The render target table is learned by
 // hooking FindRenderTarget(), so no Compositor field offsets are needed; only
 // the renderer's texture bookkeeping depends on the game edition.
+//
+// SetRenderTargets() runs on the game thread (from the FindRenderTarget hook),
+// while Grab() runs on the dedicated grab worker, so the cached table pointers
+// are atomic. Grab() itself and LastError() must stay on one thread.
 class FrameGrabber {
 public:
   FrameGrabber() = default;
@@ -32,8 +37,8 @@ public:
     //
     // So we cache on every call, so that it gets corrected when the correct object
     // address arrives.
-    m_renderOutline = renderOutline;
-    m_targets = targets;
+    m_renderOutline.store(renderOutline);
+    m_targets.store(targets);
 
     // if (!m_isRenderTargetSet) {
     //   m_targets = targets;
@@ -44,7 +49,7 @@ public:
 
   // Read the current rtScreenshot pixels into `out`. `frameIndex` must be the
   // compositor's frame counter as it was before the render call (the render
-  // graph uses it to select the ping-pong texture).
+  // graph uses it to select the ping-pong texture). Called on the grab worker.
   bool Grab(
     u32 frameIndex,
     std::vector<u08> *out,
@@ -62,8 +67,8 @@ private:
 
   bool m_isRenderOutlineSet = false;
   bool m_isRenderTargetSet = false;
-  const RenderOutline *m_renderOutline = nullptr;
-  const RenderTarget *m_targets = nullptr;
+  std::atomic<const RenderOutline *> m_renderOutline{nullptr};
+  std::atomic<const RenderTarget *> m_targets{nullptr};
   std::string m_lastError;
 };
 
