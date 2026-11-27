@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -17,11 +18,26 @@
 #include "skylink/skyTexture.hpp"
 #include "record/modui.hpp"
 #include "record/hook.hpp"
+#include "record/media/mediaEncoder.hpp"
 #include "record/lightflow.hpp"
 
 static LightFlowMod *g_lightFlow = nullptr;
 
 namespace {
+
+// Upper bound for the audio backlog between the capture thread and the encoder
+// worker. Several seconds at the default packet size; older blocks are dropped
+// so a slow encoder cannot grow the queue without limit.
+constexpr usize kMaxQueuedAudioBlocks = 512;
+
+// Both video and audio timestamps are derived from QueryPerformanceCounter():
+// std::chrono::steady_clock on MSVC uses the same counter, so sampling it next
+// to m_startTime keeps the two streams on one clock.
+i64 QueryQpcNow() {
+  LARGE_INTEGER value = {};
+  QueryPerformanceCounter(&value);
+  return value.QuadPart;
+}
 
 std::wstring TimestampName() {
   SYSTEMTIME time;
@@ -77,7 +93,7 @@ bool LightFlowMod::Initialize(HMODULE module, GameProfile profile) {
   m_modFolder = Win64SysCall::GetModuleFolder(module);
   m_capturesFolder = PathUtils::Join({m_modFolder, L"captures"});
 
-  VideoEncoder::GlobalInitialize();
+  MediaEncoder::GlobalInitialize();
   m_settings.Load();
 
   m_lightFlowUi = new LightFlowUi();
@@ -220,11 +236,17 @@ void LightFlowMod::StartCapture() {
   m_activeOutput = output;
   m_activeCodec = m_settings.codec;
   m_activeBitrate = std::max(100, m_settings.bitrateKbps);
+  m_activeAudioBitrate = std::max(16, m_settings.audioBitrateKbps);
   m_activeFps = m_settings.targetFps > 0 ? m_settings.targetFps : 30;
   m_showOverlay = m_settings.showOverlay;
   m_swapRedBlue = m_settings.swapRedBlue;
   m_targetFps = m_settings.targetFps;
   m_queueLimit = std::max(1, m_settings.queueSize);
+
+  // The audio thread is independent from the frame workers; stop it first so
+  // it cannot enqueue audio for the session that is about to end.
+  m_audioCapture.RequestStop();
+  m_audioCapture.Join();
 
   // Finish any previous workers before resetting the stop flags, otherwise an
   // old worker could observe m_stopWorker == false and never exit.
@@ -254,6 +276,8 @@ void LightFlowMod::StartCapture() {
     std::lock_guard<std::mutex> lock(m_queueMutex);
     m_queue.clear();
     m_freeBuffers.clear();
+    m_audioQueue.clear();
+    m_audioFreeBuffers.clear();
   }
 
   m_stopGrabber = false;
@@ -264,13 +288,22 @@ void LightFlowMod::StartCapture() {
   m_capturedFrames = 0;
   m_encodedFrames = 0;
   m_droppedFrames = 0;
+  m_audioDroppedBlocks = 0;
   m_encoderWidth = 0;
   m_encoderHeight = 0;
   m_lastGrabFailLogMs = 0;
   m_screenshotPendingThisFrame = false;
 
+  // Sample both clocks back to back: audio timestamps are derived from the QPC
+  // reading, video timestamps from m_startTime.
   m_startTime = std::chrono::steady_clock::now();
+  m_sessionStartQpc = QueryQpcNow();
   m_lastGrabTime = m_startTime - std::chrono::seconds(1);
+
+  // The audio thread starts first so capture begins even while the encoder is
+  // still waiting for the first render target frame.
+  StartAudioSession();
+
   m_worker = std::thread(&LightFlowMod::WorkerLoop, this);
   m_grabWorker = std::thread(&LightFlowMod::GrabberLoop, this);
 
@@ -281,6 +314,10 @@ void LightFlowMod::StartCapture() {
 void LightFlowMod::StopCapture(bool join) {
   bool wasCapturing = m_capturing;
   m_capturing = false;
+
+  // Stop the audio client before the encoder worker drains the queue, so the
+  // worker can flush every captured block and then close the muxer.
+  m_audioCapture.RequestStop();
 
   // The stop flags are part of the workers' wait predicates, so they must be
   // stored under the matching mutex; otherwise a worker that is between its
@@ -300,6 +337,10 @@ void LightFlowMod::StopCapture(bool join) {
     SetStatus("Stopping capture...");
 
   if (join) {
+    // The audio thread has to be gone before the encoder worker flushes the
+    // muxer and writes the trailer.
+    m_audioCapture.Join();
+
     // Join the grab worker first so no more frames can enter the queue while
     // the encoder drains the remaining ones.
     if (m_grabWorker.joinable())
@@ -313,6 +354,9 @@ void LightFlowMod::StopCapture(bool join) {
 }
 
 void LightFlowMod::ReapWorker() {
+  if (m_audioCapture.IsRunning() && m_audioCapture.IsDone())
+    m_audioCapture.Join();
+
   if (m_grabWorker.joinable() && m_grabWorkerDone.load())
     m_grabWorker.join();
 
@@ -451,43 +495,193 @@ void LightFlowMod::GrabFrame(const GrabRequest &request) {
   m_queueCondition.notify_one();
 }
 
+void LightFlowMod::StartAudioSession() {
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_audioQueue.clear();
+    m_audioFreeBuffers.clear();
+    m_audioWorkerDone = true;
+  }
+  m_audioEnabled = false;
+
+  if (!m_settings.audioEnabled) {
+    LOGI("Audio capture is disabled in the settings.");
+    return;
+  }
+
+  // Set this before the thread starts: it may fail and exit immediately.
+  m_audioWorkerDone = false;
+
+  std::string error;
+  bool started = m_audioCapture.Start(
+    [this](const i16 *samples, i32 frames, i64 ptsMs) {
+      OnAudioSamples(samples, frames, ptsMs);
+    },
+    m_sessionStartQpc,
+    [this]() { OnAudioWorkerExit(); },
+    error);
+
+  if (!started) {
+    m_audioWorkerDone = true;
+    LOGW("Cannot start audio capture: %s", error.c_str());
+    return;
+  }
+
+  m_audioEnabled = true;
+  LOG(
+    "Audio capture started (process loopback, %d Hz, %d channels).",
+    m_audioCapture.SampleRate(),
+    m_audioCapture.Channels());
+}
+
+void LightFlowMod::OnAudioSamples(const i16 *samples, i32 frames, i64 ptsMs) {
+  if (!samples || frames <= 0)
+    return;
+
+  i32 channels = m_audioCapture.Channels();
+  usize count = static_cast<usize>(frames) * static_cast<usize>(channels);
+
+  std::vector<i16> buffer;
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    if (!m_audioFreeBuffers.empty()) {
+      buffer = std::move(m_audioFreeBuffers.back());
+      m_audioFreeBuffers.pop_back();
+    }
+  }
+
+  buffer.resize(count);
+  memcpy(buffer.data(), samples, count * sizeof(i16));
+
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+
+    // If the encoder falls behind, drop the oldest audio so capture stays
+    // close to real time instead of growing a backlog forever.
+    if (m_audioQueue.size() >= kMaxQueuedAudioBlocks) {
+      m_audioFreeBuffers.push_back(std::move(m_audioQueue.front().samples));
+      m_audioQueue.pop_front();
+      m_audioDroppedBlocks++;
+    }
+
+    QueuedAudio block;
+    block.samples = std::move(buffer);
+    block.frames = frames;
+    block.ptsMs = ptsMs;
+    m_audioQueue.push_back(std::move(block));
+  }
+
+  m_queueCondition.notify_one();
+}
+
+void LightFlowMod::OnAudioWorkerExit() {
+  {
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    m_audioWorkerDone = true;
+  }
+  m_queueCondition.notify_all();
+}
+
 void LightFlowMod::WorkerLoop() {
-  VideoEncoder encoder;
+  MediaEncoder encoder;
   std::string error;
   bool opened = false;
+  // Whether the container has an audio stream. Audio arriving after a failed
+  // initialization has nowhere to go and must be discarded instead of being
+  // handed to an encoder without an audio stream.
+  bool audioMuxed = false;
 
-  std::string output;
-  std::string codec;
-  i32 bitrate = 12000;
-  i32 fps = 30;
   // StartCapture() wrote these before creating this thread.
-  output = m_activeOutput;
-  codec = m_activeCodec;
-  bitrate = m_activeBitrate;
-  fps = m_activeFps;
+  std::string output = m_activeOutput;
+  std::string codec = m_activeCodec;
+  i32 bitrate = m_activeBitrate;
+  i32 fps = m_activeFps;
+  i32 audioBitrate = m_activeAudioBitrate;
 
   while (true) {
     QueuedFrame frame;
+    bool haveFrame = false;
+    std::deque<QueuedAudio> audioBatch;
+
     {
       std::unique_lock<std::mutex> lock(m_queueMutex);
-      m_queueCondition.wait(lock, [this] {
-        // Drain everything the grab worker managed to queue before exiting on
-        // a normal stop.
+      m_queueCondition.wait(lock, [this, opened] {
+        // Drain everything the grab and audio workers managed to queue before
+        // exiting on a normal stop. Audio alone cannot open the encoder (its
+        // resolution comes from the first video frame).
         return !m_queue.empty() ||
-          (m_stopWorker.load() && m_grabWorkerDone.load());
+          (opened && !m_audioQueue.empty()) ||
+          (m_stopWorker.load() && m_grabWorkerDone.load() &&
+           m_audioWorkerDone.load());
       });
 
-      if (m_queue.empty()) {
-        if (m_stopWorker.load())
+      bool stopping = m_stopWorker.load() && m_grabWorkerDone.load() &&
+                      m_audioWorkerDone.load();
+
+      if (m_queue.empty() && m_audioQueue.empty()) {
+        if (stopping)
           break;
         continue;
       }
 
-      frame = std::move(m_queue.front());
-      m_queue.pop_front();
+      if (!opened && m_queue.empty()) {
+        // Audio captured before the first render target frame has nowhere to
+        // go; the container cannot be opened without a resolution.
+        if (stopping) {
+          for (QueuedAudio &block : m_audioQueue)
+            m_audioFreeBuffers.push_back(std::move(block.samples));
+          m_audioQueue.clear();
+          break;
+        }
+        continue;
+      }
+
+      if (!m_queue.empty()) {
+        frame = std::move(m_queue.front());
+        m_queue.pop_front();
+        haveFrame = true;
+      }
+
+      if (opened && audioMuxed) {
+        while (!m_audioQueue.empty()) {
+          audioBatch.push_back(std::move(m_audioQueue.front()));
+          m_audioQueue.pop_front();
+        }
+      } else if (opened) {
+        // Audio capture lost the race with WaitUntilReady(); keep the video
+        // recording healthy and discard whatever still trickles in.
+        while (!m_audioQueue.empty()) {
+          m_audioFreeBuffers.push_back(
+            std::move(m_audioQueue.front().samples));
+          m_audioQueue.pop_front();
+        }
+      }
     }
 
     if (!opened && !m_failed.load()) {
+      MediaEncoder::AudioStreamConfig audioConfig;
+      const MediaEncoder::AudioStreamConfig *audioConfigPtr = nullptr;
+
+      if (m_audioEnabled.load()) {
+        // The audio client activates asynchronously. Give it a moment so the
+        // container gets an audio stream from the first session onward; on
+        // failure the recording falls back to video only.
+        std::string audioError;
+        if (m_audioCapture.WaitUntilReady(1500, audioError)) {
+          audioConfig.sampleRate = m_audioCapture.SampleRate();
+          audioConfig.channels = m_audioCapture.Channels();
+          audioConfig.bitrateKbps = audioBitrate;
+          audioConfigPtr = &audioConfig;
+        } else {
+          m_audioEnabled = false;
+          m_audioCapture.RequestStop();
+          LOGW(
+            "Audio capture unavailable, recording video only: %s",
+            audioError.c_str());
+          SetStatus("Audio unavailable: %s", audioError.c_str());
+        }
+      }
+
       if (!encoder.Open(
             output,
             frame.width,
@@ -495,6 +689,7 @@ void LightFlowMod::WorkerLoop() {
             fps,
             bitrate,
             codec,
+            audioConfigPtr,
             error)) {
         SetStatus("Encoder error: %s", error.c_str());
         LOGE("Encoder error: %s", error.c_str());
@@ -502,18 +697,50 @@ void LightFlowMod::WorkerLoop() {
         m_stopWorker = true;
       } else {
         opened = true;
+        audioMuxed = audioConfigPtr != nullptr;
         m_encoderWidth = encoder.Width();
         m_encoderHeight = encoder.Height();
         SetStatus(
-          "Recording %dx%d -> %s",
+          "Recording %dx%d%s -> %s",
           encoder.Width(),
           encoder.Height(),
+          audioMuxed ? " + audio" : "",
           output.c_str());
+      }
+
+      // Pick up the audio that arrived while the encoder was being opened.
+      if (opened) {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (audioMuxed) {
+          while (!m_audioQueue.empty()) {
+            audioBatch.push_back(std::move(m_audioQueue.front()));
+            m_audioQueue.pop_front();
+          }
+        } else {
+          while (!m_audioQueue.empty()) {
+            m_audioFreeBuffers.push_back(
+              std::move(m_audioQueue.front().samples));
+            m_audioQueue.pop_front();
+          }
+        }
       }
     }
 
     if (opened && !m_failed.load()) {
-      if (!encoder.Encode(
+      for (QueuedAudio &block : audioBatch) {
+        if (!encoder.EncodeAudio(
+              block.samples.data(), block.frames, block.ptsMs, error)) {
+          SetStatus("Audio encode error: %s", error.c_str());
+          LOGE("Audio encode error: %s", error.c_str());
+          m_failed = true;
+          m_stopWorker = true;
+          break;
+        }
+      }
+    }
+
+    if (haveFrame && opened && !m_failed.load()) {
+      if (!encoder.EncodeVideo(
             frame.pixels.data(),
             frame.width,
             frame.height,
@@ -531,11 +758,16 @@ void LightFlowMod::WorkerLoop() {
 
     {
       std::lock_guard<std::mutex> lock(m_queueMutex);
-      m_freeBuffers.push_back(std::move(frame.pixels));
+      if (haveFrame)
+        m_freeBuffers.push_back(std::move(frame.pixels));
+      for (QueuedAudio &block : audioBatch)
+        m_audioFreeBuffers.push_back(std::move(block.samples));
+      audioBatch.clear();
     }
 
     if (m_failed.load()) {
-      // Stop the grab worker as well; it may be blocked on a pending request.
+      // Stop the remaining workers; both may be blocked on a pending request.
+      m_audioCapture.RequestStop();
       {
         std::lock_guard<std::mutex> lock(m_grabMutex);
         m_stopGrabber = true;
@@ -543,15 +775,14 @@ void LightFlowMod::WorkerLoop() {
       m_grabCondition.notify_all();
 
       std::lock_guard<std::mutex> lock(m_queueMutex);
-      for (QueuedFrame &queued : m_queue) {
+      for (QueuedFrame &queued : m_queue)
         m_freeBuffers.push_back(std::move(queued.pixels));
-      }
       m_queue.clear();
+      for (QueuedAudio &queued : m_audioQueue)
+        m_audioFreeBuffers.push_back(std::move(queued.samples));
+      m_audioQueue.clear();
       break;
     }
-
-    if (m_stopWorker.load() && m_grabWorkerDone.load() && m_queue.empty())
-      break;
   }
 
   encoder.Close();
@@ -656,6 +887,7 @@ void LightFlowMod::DisableCore(cstring reason) {
   // thread; ReapWorker() will join them on the next UI frame.
   if (m_capturing) {
     m_capturing = false;
+    m_audioCapture.RequestStop();
     {
       std::lock_guard<std::mutex> lock(m_grabMutex);
       m_stopGrabber = true;

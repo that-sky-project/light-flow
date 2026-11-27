@@ -171,6 +171,25 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
       mod->MarkSettingsDirty();
     }
 
+    bool audioEnabled = mod->m_settings.audioEnabled;
+    if (ImGui::Checkbox("Record audio", &audioEnabled)) {
+      mod->m_settings.audioEnabled = audioEnabled;
+      mod->MarkSettingsDirty();
+    }
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(140.0f);
+    i32 audioBitrate = mod->m_settings.audioBitrateKbps;
+    if (ImGui::InputInt("Audio kbps", &audioBitrate)) {
+      audioBitrate = std::min(512, std::max(16, audioBitrate));
+      mod->m_settings.audioBitrateKbps = audioBitrate;
+      mod->MarkSettingsDirty();
+    }
+
+    ImGui::TextDisabled(
+      "Records this game process only (WASAPI process loopback, "
+      "Windows 10 2004+).");
+
     ImGui::Spacing();
     ImGui::Separator();
 
@@ -208,6 +227,10 @@ void LightFlowUi::m_DrawPanel(LightFlowMod *mod) {
         static_cast<unsigned long long>(mod->m_encodedFrames.load()),
         static_cast<unsigned long long>(mod->m_droppedFrames.load()));
       ImGui::Text("Queue: %d / %d", queued, mod->m_queueLimit.load());
+      ImGui::Text(
+        "Audio: %s   Dropped blocks: %llu",
+        mod->m_audioEnabled.load() ? "on" : "off",
+        static_cast<unsigned long long>(mod->m_audioDroppedBlocks.load()));
       ImGui::Text(
         "Elapsed: %02lld:%02lld",
         static_cast<long long>(seconds / 60),

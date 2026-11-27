@@ -17,8 +17,8 @@
 #include "skylink/skyCompositor.hpp"
 #include "record/modSettings.hpp"
 #include "record/modui.hpp"
+#include "record/audio/audioCapturer.hpp"
 #include "record/video/frameGrabber.hpp"
-#include "record/video/videoEncoder.hpp"
 
 // The two Sky releases supported by this mod. The value comes from
 // HTGetGameStatus().edition (see mod.cpp).
@@ -43,11 +43,12 @@ inline const CompositorLayout &GetCompositorLayout(GameProfile profile) {
 
 // Threading model: the game core is single threaded. HTModRenderGui(), the
 // hotkey callbacks and the Compositor::Render hook all run on that one thread,
-// so the state they share needs no atomics. Only two helper threads run beside
+// so the state they share needs no atomics. Three helper threads run beside
 // it: the grab worker, which reads rtScreenshot so the GPU readback does not
-// stall rendering, and the video encoder worker. The grab worker hands frames
-// to the encoder through m_queue; the state both threads touch is atomic or
-// guarded by m_queueMutex / m_grabMutex.
+// stall rendering; the audio capture worker, which drains the WASAPI
+// process-loopback client; and the encoder worker. The grab and audio workers
+// hand frames to the encoder through m_queue / m_audioQueue; the state the
+// threads touch is atomic or guarded by m_queueMutex / m_grabMutex.
 class LightFlowMod {
 public:
   LightFlowMod() = default;
@@ -95,6 +96,14 @@ private:
     i64 ptsMs = 0;
   };
 
+  // One block of interleaved 16-bit PCM from the process-loopback client.
+  // `ptsMs` uses the same clock as QueuedFrame::ptsMs.
+  struct QueuedAudio {
+    std::vector<i16> samples;
+    i32 frames = 0;
+    i64 ptsMs = 0;
+  };
+
   // What the render thread asks the grab worker to read. Only one request is
   // kept: if the worker is still busy, the newer frame replaces the stale one
   // (an old frame index may point at a texture slot the game is about to
@@ -112,6 +121,11 @@ private:
   void RequestGrab(u32 frameIndex, i64 ptsMs, bool swapRedBlue);
   void GrabberLoop();
   void GrabFrame(const GrabRequest &request);
+
+  void StartAudioSession();
+  void OnAudioSamples(const i16 *samples, i32 frames, i64 ptsMs);
+  void OnAudioWorkerExit();
+
   void WorkerLoop();
   void ReapWorker();
 
@@ -148,9 +162,9 @@ private:
   bool m_screenshotPendingThisFrame = false;
   u32 m_frameIndex = 0;
 
-  // Capture session. Two helper threads run beside the game thread: the grab
-  // worker and the encoder worker. Everything they share is atomic or guarded
-  // by m_queueMutex / m_grabMutex.
+  // Capture session. Three helper threads run beside the game thread: the grab
+  // worker, the audio capture worker and the encoder worker. Everything they
+  // share is atomic or guarded by m_queueMutex / m_grabMutex.
   std::atomic<std::thread::id> m_grabThreadId{};
   std::thread m_grabWorker;
   std::mutex m_grabMutex;
@@ -159,6 +173,14 @@ private:
   bool m_grabPending = false;
   std::atomic<bool> m_stopGrabber{false};
   std::atomic<bool> m_grabWorkerDone{true};
+
+  AudioCapturer m_audioCapture;
+  std::atomic<bool> m_audioEnabled{false};
+  i32 m_activeAudioBitrate = 128;
+  i64 m_sessionStartQpc = 0;
+  std::deque<QueuedAudio> m_audioQueue;
+  std::vector<std::vector<i16>> m_audioFreeBuffers;
+  std::atomic<bool> m_audioWorkerDone{true};
 
   std::thread m_worker;
   std::mutex m_queueMutex;
@@ -173,6 +195,7 @@ private:
   std::atomic<i32> m_encoderHeight{0};
   std::atomic<u64> m_capturedFrames{0};
   std::atomic<u64> m_droppedFrames{0};
+  std::atomic<u64> m_audioDroppedBlocks{0};
 
   std::string m_activeOutput;
   std::string m_activeCodec;

@@ -58,6 +58,8 @@
 - **Force movie capture mode**：通过Hook让游戏进入电影捕获分支，通常必须开启。
 - **REC overlay**：在屏幕左上角显示录制状态。
 - **Swap R&B**：在编码前交换红/蓝通道。默认关闭；若录出的画面红蓝颠倒时开启。一般仅在国际服需要开启。
+- **Record audio**：录制本游戏进程的音频。使用WASAPI进程回环，仅支持Windows 10 2004（build 19041）及以上；音频初始化失败时会自动退化为仅录制画面。
+- **Audio kbps**：AAC音频码率，默认128 kbps。
 
 ## 构建
 

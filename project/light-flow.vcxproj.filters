@@ -37,6 +37,9 @@
     <Filter Include="src\record\audio">
       <UniqueIdentifier>{1bb0978e-ab35-457f-ab16-51220a82f8fa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\record\media">
+      <UniqueIdentifier>{c3f0e2a6-3b6e-4f0a-9a43-6a2f0d9b5c11}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\utils\types.hpp">
@@ -138,8 +141,11 @@
     <ClInclude Include="..\src\record\video\sourcePixelFormat.hpp">
       <Filter>src\record\video</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\record\video\videoEncoder.hpp">
-      <Filter>src\record\video</Filter>
+    <ClInclude Include="..\src\record\audio\audioCapturer.hpp">
+      <Filter>src\record\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\record\media\mediaEncoder.hpp">
+      <Filter>src\record\media</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -211,8 +217,11 @@
     <ClCompile Include="..\src\record\video\frameGrabber.cpp">
       <Filter>src\record\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\record\video\videoEncoder.cpp">
-      <Filter>src\record\video</Filter>
+    <ClCompile Include="..\src\record\audio\audioCapturer.cpp">
+      <Filter>src\record\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\record\media\mediaEncoder.cpp">
+      <Filter>src\record\media</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

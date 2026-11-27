@@ -19,6 +19,10 @@ struct Settings {
   // Exchange the red and blue channels of every captured frame before it is
   // handed to the encoder.
   bool swapRedBlue = false;
+  // Record the audio rendered by this game process (WASAPI process loopback)
+  // into an AAC stream next to the video.
+  bool audioEnabled = true;
+  i32 audioBitrateKbps = 128;
 
   void Load();
   void Save() const;

@@ -13,6 +13,8 @@ void Settings::Load() {
   HTModLoader::LoadSetting("queue_size", &queueSize);
   HTModLoader::LoadSetting("show_overlay", &showOverlay);
   HTModLoader::LoadSetting("swap_red_blue", &swapRedBlue);
+  HTModLoader::LoadSetting("audio_enabled", &audioEnabled);
+  HTModLoader::LoadSetting("audio_bitrate_kbps", &audioBitrateKbps);
 }
 
 void Settings::Save() const {
@@ -23,4 +25,6 @@ void Settings::Save() const {
   HTModLoader::SaveSetting("queue_size", queueSize);
   HTModLoader::SaveSetting("show_overlay", showOverlay);
   HTModLoader::SaveSetting("swap_red_blue", swapRedBlue);
+  HTModLoader::SaveSetting("audio_enabled", audioEnabled);
+  HTModLoader::SaveSetting("audio_bitrate_kbps", audioBitrateKbps);
 }
